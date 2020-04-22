@@ -1,0 +1,37 @@
+﻿@page "/"
+
+@using PointingPoker.Data
+@inject NavigationManager NavigationManager
+@inject PointingSessionManager PointingSessionManager
+
+<div class="container">
+    <div class="row">
+        <div class="card col-sm m-2">
+            <div class="card-body">
+                <h5 class="card-title">Create a session</h5>
+                <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                <a href="#" @onclick="CreatePointingSession" class="btn btn-primary">Create</a>
+            </div>
+        </div>
+        <div class="card col-sm m-2">
+            <div class="card-body">
+                <h5 class="card-title">Join a session</h5>
+                <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                <a href="#" @onclick="JoinPointingSession" class="btn btn-primary">Join</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private void CreatePointingSession()
+    {
+        var session = PointingSessionManager.Create();
+        NavigationManager.NavigateTo($"/configure/{session.Id}");
+    }
+
+    private void JoinPointingSession()
+    {
+
+    }
+}

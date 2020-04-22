@@ -1,0 +1,89 @@
+﻿@page "/configure/{sessionId}"
+
+@implements IDisposable
+@using PointingPoker.Data
+@inject PointingSessionManager PointingSessionManager
+
+<div class="row">
+    <h1 class="col">Configure Session</h1>
+    <div class="col-sm-4 pt-2 pb-2">
+        <ButtonField Prompt="Username" Command="Join" />
+    </div>
+</div>
+
+@if (_isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (_session == null)
+{
+    <p><em>Woops! Couldn't find your session :(</em></p>
+}
+else
+{
+    <h3 class="float-left">Pointing Options</h3>
+    <button class="btn btn-primary float-right" @onclick="AddPointingOption">Add</button>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var option in _session.Options)
+            {
+            <tr>
+                <td>
+                    <input type="text" value="@option.Name" @onchange="(e => UpdatePointingOption(option.Id, e.Value.ToString(), option.Value))" />
+                </td>
+                <td>
+                    <input type="text" value="@option.Value" @onchange="(e => UpdatePointingOption(option.Id, option.Name, e.Value.ToString()))" />
+                </td>
+                <td>
+                    <a class="oi oi-trash" style="cursor: pointer;" @onclick="(() => _session.RemoveOption(option.Id))"></a>
+                </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private bool _isLoading = true;
+    private PointingSession _session = null;
+
+    [Parameter]
+    public string SessionId { get; set; } = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _session = PointingSessionManager.Get(SessionId);
+        if (_session != null)
+        {
+            _session.OnOptionsChanged += OnOptionsChanged;
+        }
+
+        _isLoading = false;
+    }
+
+    public void Dispose()
+    {
+        if (_session != null)
+        {
+            _session.OnOptionsChanged -= OnOptionsChanged;
+        }
+    }
+
+    private void OnOptionsChanged() => InvokeAsync(StateHasChanged);
+
+    private void AddPointingOption()
+    {
+        _session.AddOption(new PointingOption("?", "?"));
+    }
+
+    private void UpdatePointingOption(string id, string name, string value)
+    {
+        _session.UpdateOption(new PointingOption(id, name, value));
+    }
+}
