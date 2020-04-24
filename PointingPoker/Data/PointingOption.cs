@@ -5,11 +5,7 @@ namespace PointingPoker.Data
     public class PointingOption
     {
         public PointingOption(string name, string value)
-        {
-            Id = Guid.NewGuid().ToString();
-            Name = name;
-            Value = value;
-        }
+            : this(Guid.NewGuid().ToString(), name, value) { }
 
         public PointingOption(string id, string name, string value)
         {

@@ -2,36 +2,40 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace PointingPoker.Data
 {
     public class PointingSessionManager
     {
-        private ConcurrentDictionary<string, PointingSession> _sessions;
+        private readonly ConcurrentDictionary<string, PointingSession> _sessions;
 
         public PointingSessionManager()
         {
             _sessions = new ConcurrentDictionary<string, PointingSession>();
         }
 
+        public IEnumerable<PointingSession> FindByUser(string userId)
+        {
+            return _sessions
+                .Where(s => s.Value.FindParticipant(userId) != null)
+                .Select(s => s.Value)
+                .ToArray();                
+        }
+
         public PointingSession Create()
         {
             var session = new PointingSession();
-            session.Id = Guid.NewGuid().ToString();
-
-            if (_sessions.TryAdd(session.Id, session))
+            while (!_sessions.TryAdd(session.Id, session))
             {
-                return session;
+                session = new PointingSession();
             }
 
-            return null;
+            return session;
         }
 
         public PointingSession Get(string sessionId)
         {
-            PointingSession result = null;
-            if (!_sessions.TryGetValue(sessionId, out result))
+            if (!_sessions.TryGetValue(sessionId, out var result))
             {
                 result = null;
             }

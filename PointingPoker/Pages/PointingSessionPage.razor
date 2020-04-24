@@ -1,0 +1,68 @@
+﻿@page "/pointing/{sessionId}"
+
+@implements IDisposable
+@using PointingPoker.Data
+@inject PointingSessionManager PointingSessionManager
+
+
+<div class="container">
+    <h2 class="text-center mt-4">Pointing</h2>
+
+    @if (_isLoading)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (_session == null)
+    {
+        <p><em>Woops! Couldn't find your session :(</em></p>
+    }
+    else
+    {
+        <div class="row">
+        @foreach (var participant in _session.Participants)
+        {
+            <div class="card col-sm-4 justify-content-between">
+                <h4 class="card-title text-center col-8 offset-2 mt-1">@participant.Name</h4>
+            </div>
+        }
+        </div>
+        <div class="row">
+        @foreach (var option in _session.Options)
+        {
+            <div class="card col-sm-4 justify-content-between">
+                <h4 class="card-title text-center col-8 offset-2 mt-1">@option.Name</h4>
+            </div>
+        }
+        </div>
+    }
+</div>
+
+
+@code {
+    private bool _isLoading = true;
+    private PointingSession _session = null;
+
+    [Parameter]
+    public string SessionId { get; set; } = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _session = PointingSessionManager.Get(SessionId);
+        if (_session != null)
+        {
+            _session.OnOptionsChanged += OnOptionsChanged;
+        }
+
+        _isLoading = false;
+    }
+
+    public void Dispose()
+    {
+        if (_session != null)
+        {
+            _session.OnOptionsChanged -= OnOptionsChanged;
+        }
+    }
+
+    private void OnOptionsChanged() => InvokeAsync(StateHasChanged);
+}

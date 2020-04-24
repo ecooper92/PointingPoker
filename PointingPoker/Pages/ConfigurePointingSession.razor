@@ -2,59 +2,95 @@
 
 @implements IDisposable
 @using PointingPoker.Data
+@using PointingPoker.Shared
+@inject UserManager UserManager
+@inject NavigationManager NavigationManager
 @inject PointingSessionManager PointingSessionManager
 
-<div class="row">
-    <h1 class="col">Configure Session</h1>
-    <div class="col-sm-4 pt-2 pb-2">
-        <ButtonField Prompt="Username" Command="Join" />
+<div class="container">
+    <div class="row mt-4 mb-4">
+        <h2 class="text-center col-8 offset-2">Configure Session</h2>
+        @if (!_isLoading && _session != null)
+        {
+            <div class="col-2">
+                <button class="float-right btn btn-primary" @onclick="JoinSession">Join</button>
+            </div>
+        }
     </div>
+
+    @if (_isLoading)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (_session == null)
+    {
+        <p><em>Woops! Couldn't find your session :(</em></p>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="card col-12">
+                <div class="card-body">
+                    <div class="row">
+                        <h4 class="card-title text-center col-12">Participant</h4>
+                    </div>
+                    <div class="row">
+                        <input class="form-control col-12" placeholder="Name" @bind="@Username" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="card col-12">
+                <div class="card-body">
+                    <div class="row">
+                        <h4 class="card-title text-center col-8 offset-2 mt-1">Pointing Options</h4>
+                        <div class="col-2 mb-1">
+                            <button class="btn btn-primary float-right" @onclick="AddPointingOption">Add</button>
+                        </div>
+                    </div>
+                    @*<p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>*@
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var option in _session.Options)
+                            {
+                                <tr>
+                                    <td>
+                                        <input class="form-control" type="text" value="@option.Name" @onchange="(e => UpdatePointingOption(option.Id, e.Value.ToString(), option.Value))" />
+                                    </td>
+                                    <td>
+                                        <input class="form-control" type="text" value="@option.Value" @onchange="(e => UpdatePointingOption(option.Id, option.Name, e.Value.ToString()))" />
+                                    </td>
+                                    <td>
+                                        <a class="oi oi-trash" style="cursor: pointer;" @onclick="(() => _session.RemoveOption(option.Id))"></a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
-@if (_isLoading)
-{
-    <p><em>Loading...</em></p>
-}
-else if (_session == null)
-{
-    <p><em>Woops! Couldn't find your session :(</em></p>
-}
-else
-{
-    <h3 class="float-left">Pointing Options</h3>
-    <button class="btn btn-primary float-right" @onclick="AddPointingOption">Add</button>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var option in _session.Options)
-            {
-            <tr>
-                <td>
-                    <input type="text" value="@option.Name" @onchange="(e => UpdatePointingOption(option.Id, e.Value.ToString(), option.Value))" />
-                </td>
-                <td>
-                    <input type="text" value="@option.Value" @onchange="(e => UpdatePointingOption(option.Id, option.Name, e.Value.ToString()))" />
-                </td>
-                <td>
-                    <a class="oi oi-trash" style="cursor: pointer;" @onclick="(() => _session.RemoveOption(option.Id))"></a>
-                </td>
-            </tr>
-            }
-        </tbody>
-    </table>
-}
 
 @code {
     private bool _isLoading = true;
+    private string _userId = string.Empty;
     private PointingSession _session = null;
 
     [Parameter]
     public string SessionId { get; set; } = string.Empty;
+
+    public string Username { get; set; } = string.Empty;
 
     protected override void OnInitialized()
     {
@@ -65,6 +101,16 @@ else
         }
 
         _isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _session != null)
+        {
+            _userId = await UserManager.GetUserIdAsync();
+            Username = _session.FindParticipant(_userId)?.Name ?? string.Empty;
+            StateHasChanged();
+        }
     }
 
     public void Dispose()
@@ -85,5 +131,13 @@ else
     private void UpdatePointingOption(string id, string name, string value)
     {
         _session.UpdateOption(new PointingOption(id, name, value));
+    }
+
+    private void JoinSession()
+    {
+        var participant = new Participant(_userId, Username);
+        _session.AddParticipant(participant);
+
+        NavigationManager.NavigateTo($"/pointing/{_session.Id}");
     }
 }

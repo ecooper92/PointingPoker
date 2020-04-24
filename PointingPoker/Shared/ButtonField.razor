@@ -1,11 +1,14 @@
 ﻿<div class="input-group">
     <input type="text" class="form-control" placeholder="@Prompt" aria-label="@Prompt" aria-describedby="basic-addon2">
-    <button class="input-group-append btn btn-primary">@Command</button>
+    <button class="input-group-append btn btn-primary" @onclick="Command">@CommandText</button>
 </div>
 
 @code {
     [Parameter]
-    public string Command { get; set; }
+    public Action Command { get; set; }
+
+    [Parameter]
+    public string CommandText { get; set; }
 
     [Parameter]
     public string Prompt { get; set; }
