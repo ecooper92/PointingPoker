@@ -8,12 +8,15 @@ namespace PointingPoker.Data
 {
     public class PointingSession
     {
+        const int MAX_TOPICS = 200;
         const int MAX_OPTIONS = 100;
         const int MAX_PARTICIPANTS = 200;
 
-        private ConcurrentDictionary<string, CountingItem<PointingOption>> _options;
         private ConcurrentDictionary<string, Participant> _participants;
+        private ConcurrentDictionary<string, CountingItem<PointingTopic>> _topics;
+        private ConcurrentDictionary<string, CountingItem<PointingOption>> _options;
 
+        public event Action OnTopicsChanged;
         public event Action OnOptionsChanged;
         public event Action OnParticipantsChanged;
 
@@ -22,8 +25,9 @@ namespace PointingPoker.Data
         public PointingSession(string id)
         {
             Id = id;
-            _options = new ConcurrentDictionary<string, CountingItem<PointingOption>>();
             _participants = new ConcurrentDictionary<string, Participant>();
+            _topics = new ConcurrentDictionary<string, CountingItem<PointingTopic>>();
+            _options = new ConcurrentDictionary<string, CountingItem<PointingOption>>();
 
             // Pre-populate options
             AddOption(new PointingOption("0 points", "0"));
@@ -39,6 +43,8 @@ namespace PointingPoker.Data
         }
 
         public string Id { get; } = string.Empty;
+
+        public IEnumerable<PointingTopic> Topics => _topics.OrderBy(o => o.Value.Count).Select(o => o.Value.Item).ToArray();
 
         public IEnumerable<PointingOption> Options => _options.OrderBy(o => o.Value.Count).Select(o => o.Value.Item).ToArray();
 
@@ -70,6 +76,44 @@ namespace PointingPoker.Data
             if (_participants.TryRemove(participantId, out var participant))
             {
                 SafeRunAction(OnParticipantsChanged);
+            }
+        }
+
+        public void AddTopic(PointingTopic topic)
+        {
+            // Sanity check
+            if (_topics.Count > MAX_TOPICS)
+            {
+                throw new InvalidOperationException($"Only up to {MAX_TOPICS} topics are supported per session.");
+            }
+
+            while (!_topics.TryAdd(topic.Id, new CountingItem<PointingTopic>(topic)))
+            {
+                topic = new PointingTopic(topic.Name, topic.Discussion);
+            }
+
+            SafeRunAction(OnTopicsChanged);
+        }
+
+        public void UpdateTopic(PointingTopic topic)
+        {
+            // Attempt to update until successful or if the option is removed/doesn't exist.
+            while (_topics.TryGetValue(topic.Id, out var item) && item.Item.IsModified(topic))
+            {
+                if (_topics.TryUpdate(topic.Id, new CountingItem<PointingTopic>(topic), item))
+                {
+                    SafeRunAction(OnTopicsChanged);
+                    return;
+                }
+            }
+
+        }
+
+        public void RemoveTopic(string id)
+        {
+            if (_topics.TryRemove(id, out var topic))
+            {
+                SafeRunAction(OnTopicsChanged);
             }
         }
 
