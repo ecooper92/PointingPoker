@@ -132,6 +132,20 @@ app {
     top: 0.5rem;
 }
 
+.voting-participants-bar {
+    background-color: #f7f7f7;
+    border-top: 1px solid #d6d5d5;
+}
+
+.vote-indicator {
+    height: 0.8rem;
+    background-color: red;
+}
+
+.vote-indicator.voted {
+    background-color: limegreen;
+}
+
 @media (min-width: 768px) {
     app {
         flex-direction: row;

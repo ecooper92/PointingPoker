@@ -5,37 +5,59 @@
 @inject PointingSessionManager PointingSessionManager
 
 
-<div class="container">
-    <h2 class="text-center mt-4">Pointing</h2>
+    <div class="container">
+        <h2 class="text-center mt-4">Pointing</h2>
 
-    @if (_isLoading)
-    {
-        <p><em>Loading...</em></p>
-    }
-    else if (_session == null)
-    {
-        <p><em>Woops! Couldn't find your session :(</em></p>
-    }
-    else
-    {
-        <div class="row">
+        @if (_isLoading)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else if (_session == null)
+        {
+            <p><em>Woops! Couldn't find your session :(</em></p>
+        }
+        else
+        {
+            <div class="row">
+                <select id="topic-select" class="form-control col-sm-11" @onchange="(e => SelectedTopic = _session.FindTopic(e.Value.ToString()))">
+                    @foreach (var topic in _session.Topics)
+                    {
+                        <option value="@topic.Id">@topic.Name</option>
+                    }
+                </select>
+                <div class="col-sm-1 pr-0">
+                    <button class="btn btn-primary float-right">Add</button>
+                </div>
+            </div>
+
+            <div class="row">
+                <input class="form-control" type="text" placeholder="Name" value="@SelectedTopic?.Name" @onchange="(e => UpdatePointingTopic(SelectedTopic.Id, e.Value.ToString(), SelectedTopic?.Discussion))"/>
+            </div>
+
+            <div class="row">
+                <textarea class="form-control" placeholder="Discussion..." value="@SelectedTopic?.Discussion" @onchange="(e => UpdatePointingTopic(SelectedTopic.Id, SelectedTopic?.Name, e.Value.ToString()))"></textarea>
+            </div>
+
+            <div class="row">
+                @foreach (var option in _session.Options)
+                {
+                    <div class="card col-sm-4 justify-content-between">
+                        <h4 class="card-title text-center col-8 offset-2 mt-1">@option.Name</h4>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="voting-participants-bar fixed-bottom d-flex flex-row justify-content-center">
         @foreach (var participant in _session.Participants)
         {
-            <div class="card col-sm-4 justify-content-between">
-                <h4 class="card-title text-center col-8 offset-2 mt-1">@participant.Name</h4>
+            <div class="card ml-1 mr-1">
+                <div class="vote-indicator voted"></div>
+                <h4 class="ml-3 mr-3 mt-2 mb-2">@participant.Name</h4>
             </div>
         }
         </div>
-        <div class="row">
-        @foreach (var option in _session.Options)
-        {
-            <div class="card col-sm-4 justify-content-between">
-                <h4 class="card-title text-center col-8 offset-2 mt-1">@option.Name</h4>
-            </div>
-        }
-        </div>
-    }
-</div>
+    </div>
 
 
 @code {
@@ -45,12 +67,17 @@
     [Parameter]
     public string SessionId { get; set; } = string.Empty;
 
+    public PointingTopic SelectedTopic { get; set; }
+
     protected override void OnInitialized()
     {
         _session = PointingSessionManager.Get(SessionId);
         if (_session != null)
         {
+            _session.OnTopicsChanged += OnTopicsChanged;
             _session.OnOptionsChanged += OnOptionsChanged;
+            _session.OnParticipantsChanged += OnParticipantsChanged;
+            SelectedTopic = _session.Topics.FirstOrDefault();
         }
 
         _isLoading = false;
@@ -60,9 +87,24 @@
     {
         if (_session != null)
         {
+            _session.OnOptionsChanged -= OnTopicsChanged;
             _session.OnOptionsChanged -= OnOptionsChanged;
+            _session.OnOptionsChanged -= OnParticipantsChanged;
         }
     }
 
+    private void UpdatePointingTopic(string id, string name, string discussion)
+    {
+        _session.UpdateTopic(new PointingTopic(id, name, discussion));
+    }
+
+    private void OnTopicsChanged()
+    {
+        SelectedTopic = _session.FindTopic(SelectedTopic?.Id);
+        InvokeAsync(StateHasChanged);
+    }
+
     private void OnOptionsChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnParticipantsChanged() => InvokeAsync(StateHasChanged);
 }

@@ -13,6 +13,12 @@ namespace PointingPoker.Data
             Count = Interlocked.Increment(ref Counter);
         }
 
+        public CountingItem(int count, T item)
+        {
+            Item = item;
+            Count = count;
+        }
+
         public T Item { get; }
 
         public int Count { get; }

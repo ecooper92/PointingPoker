@@ -30,7 +30,8 @@ namespace PointingPoker.Data
             _options = new ConcurrentDictionary<string, CountingItem<PointingOption>>();
 
             // Pre-poplate topics
-            AddTopic(new PointingTopic("Default Story", string.Empty));
+            AddTopic(new PointingTopic("Default Story 1", "some discussion"));
+            AddTopic(new PointingTopic("Default Story 2", "other discussion"));
 
             // Pre-populate options
             AddOption(new PointingOption("0 points", "0"));
@@ -82,6 +83,16 @@ namespace PointingPoker.Data
             }
         }
 
+        public PointingTopic FindTopic(string topicId)
+        {
+            if (!string.IsNullOrEmpty(topicId) && _topics.TryGetValue(topicId, out var topic))
+            {
+                return topic.Item;
+            }
+
+            return null;
+        }
+
         public void AddTopic(PointingTopic topic)
         {
             // Sanity check
@@ -103,7 +114,7 @@ namespace PointingPoker.Data
             // Attempt to update until successful or if the option is removed/doesn't exist.
             while (_topics.TryGetValue(topic.Id, out var item) && item.Item.IsModified(topic))
             {
-                if (_topics.TryUpdate(topic.Id, new CountingItem<PointingTopic>(topic), item))
+                if (_topics.TryUpdate(topic.Id, new CountingItem<PointingTopic>(item.Count, topic), item))
                 {
                     SafeRunAction(OnTopicsChanged);
                     return;
@@ -141,7 +152,7 @@ namespace PointingPoker.Data
             // Attempt to update until successful or if the option is removed/doesn't exist.
             while (_options.TryGetValue(option.Id, out var item) && item.Item.IsModified(option))
             {
-                if (_options.TryUpdate(option.Id, new CountingItem<PointingOption>(option), item))
+                if (_options.TryUpdate(option.Id, new CountingItem<PointingOption>(item.Count, option), item))
                 {
                     SafeRunAction(OnOptionsChanged);
                     return;
