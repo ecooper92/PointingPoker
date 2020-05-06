@@ -29,6 +29,9 @@ namespace PointingPoker.Data
             _topics = new ConcurrentDictionary<string, CountingItem<PointingTopic>>();
             _options = new ConcurrentDictionary<string, CountingItem<PointingOption>>();
 
+            // Pre-poplate topics
+            AddTopic(new PointingTopic("Default Story", string.Empty));
+
             // Pre-populate options
             AddOption(new PointingOption("0 points", "0"));
             AddOption(new PointingOption("1 point", "1"));
