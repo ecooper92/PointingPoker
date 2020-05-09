@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PointingPoker.Data
@@ -12,22 +13,41 @@ namespace PointingPoker.Data
         const int MAX_OPTIONS = 100;
         const int MAX_PARTICIPANTS = 200;
 
+        private ConcurrentDictionary<string, Vote> _votes;
         private ConcurrentDictionary<string, Participant> _participants;
         private ConcurrentDictionary<string, CountingItem<PointingTopic>> _topics;
         private ConcurrentDictionary<string, CountingItem<PointingOption>> _options;
 
+        public event Action OnVotesChanged;
         public event Action OnTopicsChanged;
         public event Action OnOptionsChanged;
         public event Action OnParticipantsChanged;
 
-        public PointingSession() : this(Guid.NewGuid().ToString()) { }
+        private static int _counter;
+
+        public PointingSession() : this(Interlocked.Increment(ref _counter).ToString()/*Guid.NewGuid().ToString()*/) { }
 
         public PointingSession(string id)
         {
             Id = id;
+            _votes = new ConcurrentDictionary<string, Vote>();
             _participants = new ConcurrentDictionary<string, Participant>();
             _topics = new ConcurrentDictionary<string, CountingItem<PointingTopic>>();
             _options = new ConcurrentDictionary<string, CountingItem<PointingOption>>();
+
+            AddParticipant(new Participant("1", "JoeBob1"));
+            AddParticipant(new Participant("2", "JoeBob2"));
+            AddParticipant(new Participant("3", "JoeBob3"));
+            AddParticipant(new Participant("4", "JoeBob4"));
+            AddParticipant(new Participant("5", "JoeBob5"));
+            AddParticipant(new Participant("6", "JoeBob6"));
+            AddParticipant(new Participant("7", "JoeBob7"));
+            AddParticipant(new Participant("8", "JoeBob8"));
+            AddParticipant(new Participant("9", "JoeBob9"));
+            AddParticipant(new Participant("10", "JoeBob10"));
+            AddParticipant(new Participant("11", "JoeBob11"));
+            AddParticipant(new Participant("12", "JoeBob12"));
+            AddParticipant(new Participant("13", "JoeBob13"));
 
             // Pre-poplate topics
             AddTopic(new PointingTopic("Default Story 1", "some discussion"));
@@ -53,6 +73,90 @@ namespace PointingPoker.Data
         public IEnumerable<PointingOption> Options => _options.OrderBy(o => o.Value.Count).Select(o => o.Value.Item).ToArray();
 
         public IEnumerable<Participant> Participants => _participants.Select(o => o.Value).ToArray();
+
+        //public Vote FindVote(string userId, string optionId)
+        //{
+        //    if (!string.IsNullOrEmpty(topicId) && _topics.TryGetValue(topicId, out var topic))
+        //    {
+        //        return topic.Item;
+        //    }
+
+        //    return null;
+        //}
+
+        //public void AddTopic(PointingTopic topic)
+        //{
+        //    // Sanity check
+        //    if (_topics.Count > MAX_TOPICS)
+        //    {
+        //        throw new InvalidOperationException($"Only up to {MAX_TOPICS} topics are supported per session.");
+        //    }
+
+        //    while (!_topics.TryAdd(topic.Id, new CountingItem<PointingTopic>(topic)))
+        //    {
+        //        topic = new PointingTopic(topic.Name, topic.Discussion);
+        //    }
+
+        //    SafeRunAction(OnTopicsChanged);
+        //}
+
+        //public void UpdateTopic(PointingTopic topic)
+        //{
+        //    // Attempt to update until successful or if the option is removed/doesn't exist.
+        //    while (_topics.TryGetValue(topic.Id, out var item) && item.Item.IsModified(topic))
+        //    {
+        //        if (_topics.TryUpdate(topic.Id, new CountingItem<PointingTopic>(item.Count, topic), item))
+        //        {
+        //            SafeRunAction(OnTopicsChanged);
+        //            return;
+        //        }
+        //    }
+
+        //}
+
+        //public void RemoveTopic(string id)
+        //{
+        //    if (_topics.TryRemove(id, out var topic))
+        //    {
+        //        SafeRunAction(OnTopicsChanged);
+        //    }
+        //}
+
+        public IEnumerable<Vote> GetVotesByUser(string userId)
+        {
+            return _votes
+                .Where(v => v.Value.UserId == userId)
+                .Select(v => v.Value)
+                .ToArray();
+        }
+
+        public IEnumerable<Vote> GetVotesByTopic(string topicId)
+        {
+            return _votes
+                .Where(v => v.Value.TopicId == topicId)
+                .Select(v => v.Value)
+                .ToArray();
+        }
+
+        public Vote GetVoteByUserAndTopic(string userId, string topicId)
+        {
+            if (!string.IsNullOrEmpty(userId)
+                && !string.IsNullOrEmpty(topicId)
+                && _votes.TryGetValue(GetVoteKey(userId, topicId), out var vote))
+            {
+                return vote;
+            }
+
+            return null;
+        }
+
+        public void Vote(string userId, string topicId, string optionId)
+        {
+            var vote = new Vote(userId, topicId, optionId);
+            _votes.AddOrUpdate(GetVoteKey(userId, topicId), vote, (key, exisitingVote) => vote);
+
+            SafeRunAction(OnVotesChanged);
+        }
 
         public Participant FindParticipant(string userId)
         {
@@ -168,6 +272,8 @@ namespace PointingPoker.Data
                 SafeRunAction(OnOptionsChanged);
             }
         }
+
+        private string GetVoteKey(string userId, string topicId) => $"{userId}:{topicId}";
 
         private void SafeRunAction(Action action)
         {

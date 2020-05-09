@@ -5,26 +5,48 @@
 @inject NavigationManager NavigationManager
 @inject PointingSessionManager PointingSessionManager
 
-<div class="container">
-    <div class="row">
-        <div class="card col-sm m-2">
-            <div class="card-body">
-                <h5 class="card-title">Create a pointing session</h5>
-                <p class="card-text">Create a new session for your group to assign points to stories.</p>
-                <a href="#" @onclick="CreatePointingSession" class="btn btn-primary">Create</a>
-            </div>
-        </div>
-        <div class="card col-sm m-2">
-            <div class="card-body">
-                <h5 class="card-title">Join a session</h5>
-                <p class="card-text">Join an existing pointing session.</p>
-                <a href="#" @onclick="JoinPointingSession" class="btn btn-primary">Join</a>
+@if (_isLoading)
+{
+    <h3 class="text-center m-auto">Loading...</h3>
+}
+else
+{
+    <div class="index-container overflow-auto">
+        <div class="container">
+            <div class="row">
+                <div class="col-sm m-2">
+                    <div class="card ">
+                        <img class="card-img-top" src="create.jpg" alt="Create">
+                        <div class="card-body">
+                            <h5 class="card-title">Create a session</h5>
+                            <p class="card-text">Create a new session for your group to assign values to stories.</p>
+                            <a href="#" @onclick="CreatePointingSession" class="btn btn-primary float-right">Create</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm m-2">
+                    <div class="card">
+                        <img class="card-img-top" src="join-sm.jpg" alt="Join">
+                        <div class="card-body">
+                            <h5 class="card-title">Join a session</h5>
+                            <p class="card-text">Join an existing session for your group to assign values to stories.</p>
+                            <div class="d-flex flex-row">
+                                <div class="flex-grow-1">
+                                    <input @bind="_sessionId" type="text" placeholder="Session Id#" class="form-control" />
+                                </div>
+                                <a href="#" @onclick="JoinPointingSession" class="btn btn-primary ml-2">Join</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 @code {
+    private bool _isLoading = false;
+    private string _sessionId = string.Empty;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -39,6 +61,9 @@
 
     private void JoinPointingSession()
     {
-
+        if (!string.IsNullOrEmpty(_sessionId))
+        {
+            NavigationManager.NavigateTo($"/configure/{_sessionId}");
+        }
     }
 }

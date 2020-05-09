@@ -2,95 +2,133 @@
 
 @implements IDisposable
 @using PointingPoker.Data
+@inject UserManager UserManager
 @inject PointingSessionManager PointingSessionManager
 
 
-    <div class="container">
-        <h2 class="text-center mt-4">Pointing</h2>
-
-        @if (_isLoading)
-        {
-            <p><em>Loading...</em></p>
-        }
-        else if (_session == null)
-        {
-            <p><em>Woops! Couldn't find your session :(</em></p>
-        }
-        else
-        {
-            <div class="row">
-                <select id="topic-select" class="form-control col-sm-11" @onchange="(e => SelectedTopic = _session.FindTopic(e.Value.ToString()))">
-                    @foreach (var topic in _session.Topics)
-                    {
-                        <option value="@topic.Id">@topic.Name</option>
-                    }
-                </select>
-                <div class="col-sm-1 pr-0">
-                    <button class="btn btn-primary float-right">Add</button>
-                </div>
-            </div>
-
-            <div class="row">
-                <input class="form-control" type="text" placeholder="Name" value="@SelectedTopic?.Name" @onchange="(e => UpdatePointingTopic(SelectedTopic.Id, e.Value.ToString(), SelectedTopic?.Discussion))"/>
-            </div>
-
-            <div class="row">
-                <textarea class="form-control" placeholder="Discussion..." value="@SelectedTopic?.Discussion" @onchange="(e => UpdatePointingTopic(SelectedTopic.Id, SelectedTopic?.Name, e.Value.ToString()))"></textarea>
-            </div>
-
-            <div class="row">
-                @foreach (var option in _session.Options)
+@if (_isLoading)
+{
+    <h3 class="text-center m-auto">Loading...</h3>
+}
+else if (_session == null)
+{
+    <h3 class="text-center m-auto">Woops! Couldn't find your session :(</h3>
+}
+else
+{
+    <div class="pointing-session w-100 h-100 d-flex flex-column">
+        <div class="pointing-session-top d-flex flex-row flex-grow-1">
+            <div class="pointing-session-left d-flex flex-column">
+                @foreach (var participant in _session.Participants)
                 {
-                    <div class="card col-sm-4 justify-content-between">
-                        <h4 class="card-title text-center col-8 offset-2 mt-1">@option.Name</h4>
+                    var userVote = _session.GetVoteByUserAndTopic(participant.UserId, SelectedTopic?.Id);
+                    var voteOption = _session.Options.FirstOrDefault(o => o.Id == userVote?.OptionId);
+                    <div class="voting-participant d-flex flex-row pl-3 pr-3 align-items-center">
+                        <span class="oi oi-person voting-participant-icon @(userVote != null ? "voted" : "")"/>
+                        <div class="voting-participant-text-container d-flex flex-column flex-grow-1 align-items-start pl-2 pt-1 pb-1">
+                            <span class="voting-participant-text">@(string.IsNullOrEmpty(participant.Name) ? "<No name>" : participant.Name)</span>
+                            <div class="voting-participant-status">@(voteOption != null ? voteOption.Name : "Waiting...")</div>
+                        </div>
                     </div>
                 }
             </div>
-        }
+            <div class="pointing-session-right d-flex flex-column flex-grow-1">
+                <div class="pointing-session-topic-container d-flex flex-wrap flex-row pl-2">
+                    @foreach (var topic in _session.Topics)
+                    {
+                        <button @onclick="(e => ChangeSelectedTopic(topic.Id))" class="btn pointing-session-topic-topic-text pt-1 pb-1 pl-2 pr-2 m-2 @(SelectedTopic != null && SelectedTopic.Id == topic.Id ? "selected":"")">@topic.Name</button>
+                    }
+                </div>
 
-        <div class="voting-participants-bar fixed-bottom d-flex flex-row justify-content-center">
-        @foreach (var participant in _session.Participants)
-        {
-            <div class="card ml-1 mr-1">
-                <div class="vote-indicator voted"></div>
-                <h4 class="ml-3 mr-3 mt-2 mb-2">@participant.Name</h4>
+                <div class="container p-2">
+                    <div class="d-flex flex-column">
+                        <div class="d-flex flex-row mt-2 mb-2">
+                            <input class="form-control" type="text" placeholder="Name" value="@SelectedTopic?.Name" @onchange="(e => UpdatePointingTopic(SelectedTopic.Id, e.Value.ToString(), SelectedTopic?.Discussion))" />
+                        </div>
+
+                        <div class="d-flex flex-row mt-2 mb-2">
+                            <textarea class="form-control" placeholder="Discussion..." value="@SelectedTopic?.Discussion" @onchange="(e => UpdatePointingTopic(SelectedTopic.Id, SelectedTopic?.Name, e.Value.ToString()))"></textarea>
+                        </div>
+
+                        <div class="d-flex flex-row mt-2 mb-2 justify-content-around flex-wrap">
+                            @foreach (var option in _session.Options)
+                            {
+                                <button class="btn @(SelectedVote != null && SelectedVote.OptionId == option.Id ? "btn-success":"btn-info") p-2 m-1" @onclick="(e => Vote(option.Id))">@option.Name</button>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
-        }
+        </div>
+        <div class="pointing-session-bottom">
         </div>
     </div>
+}
 
 
 @code {
     private bool _isLoading = true;
+    private string _userId = string.Empty;
     private PointingSession _session = null;
 
     [Parameter]
     public string SessionId { get; set; } = string.Empty;
 
+    public string Username { get; set; } = string.Empty;
+
     public PointingTopic SelectedTopic { get; set; }
+
+    public Vote SelectedVote { get; set; }
 
     protected override void OnInitialized()
     {
         _session = PointingSessionManager.Get(SessionId);
         if (_session != null)
         {
+            _session.OnVotesChanged += OnVotesChanged;
             _session.OnTopicsChanged += OnTopicsChanged;
             _session.OnOptionsChanged += OnOptionsChanged;
             _session.OnParticipantsChanged += OnParticipantsChanged;
             SelectedTopic = _session.Topics.FirstOrDefault();
         }
+        else
+        {
+            _isLoading = false;
+        }
+    }
 
-        _isLoading = false;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _session != null)
+        {
+            _userId = await UserManager.GetUserIdAsync();
+            SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopic?.Id);
+
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
 
     public void Dispose()
     {
         if (_session != null)
         {
+            _session.OnOptionsChanged -= OnVotesChanged;
             _session.OnOptionsChanged -= OnTopicsChanged;
             _session.OnOptionsChanged -= OnOptionsChanged;
             _session.OnOptionsChanged -= OnParticipantsChanged;
         }
+    }
+
+    private void ChangeSelectedTopic(string topicId)
+    {
+        SelectedTopic = _session.FindTopic(topicId);
+        SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopic?.Id);
+    }
+
+    private void Vote(string optionId)
+    {
+        _session.Vote(_userId, SelectedTopic?.Id, optionId);
     }
 
     private void UpdatePointingTopic(string id, string name, string discussion)
@@ -98,9 +136,16 @@
         _session.UpdateTopic(new PointingTopic(id, name, discussion));
     }
 
+    private void OnVotesChanged()
+    {
+        SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopic?.Id);
+        InvokeAsync(StateHasChanged);
+    }
+
     private void OnTopicsChanged()
     {
         SelectedTopic = _session.FindTopic(SelectedTopic?.Id);
+        SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopic?.Id);
         InvokeAsync(StateHasChanged);
     }
 
