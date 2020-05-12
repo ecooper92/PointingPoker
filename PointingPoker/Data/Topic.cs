@@ -2,12 +2,12 @@
 
 namespace PointingPoker.Data
 {
-    public class PointingTopic
+    public class Topic
     {
-        public PointingTopic(string name, string value)
+        public Topic(string name, string value)
             : this(Guid.NewGuid().ToString(), name, value) { }
 
-        public PointingTopic(string id, string name, string discussion)
+        public Topic(string id, string name, string discussion)
         {
             Id = id;
             Name = name;
@@ -23,7 +23,7 @@ namespace PointingPoker.Data
         /// <summary>
         /// Returns true if the option has the same id, but modified fields.
         /// </summary>
-        public bool IsModified(PointingTopic other)
+        public bool IsModified(Topic other)
         {
             return this.Id == other.Id
                 && (this.Name != other.Name || this.Discussion != other.Discussion);

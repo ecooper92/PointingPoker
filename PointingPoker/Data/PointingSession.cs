@@ -13,9 +13,9 @@ namespace PointingPoker.Data
         const int MAX_OPTIONS = 100;
         const int MAX_PARTICIPANTS = 200;
 
-        private ConcurrentDictionary<string, Vote> _votes;
+        //private ConcurrentDictionary<string, Vote> _votes;
         private ConcurrentDictionary<string, Participant> _participants;
-        private ConcurrentDictionary<string, CountingItem<PointingTopic>> _topics;
+        private ConcurrentDictionary<string, CountingItem<VotingTopic>> _topics;
         private ConcurrentDictionary<string, CountingItem<PointingOption>> _options;
 
         public event Action OnVotesChanged;
@@ -30,9 +30,9 @@ namespace PointingPoker.Data
         public PointingSession(string id)
         {
             Id = id;
-            _votes = new ConcurrentDictionary<string, Vote>();
+            //_votes = new ConcurrentDictionary<string, Vote>();
             _participants = new ConcurrentDictionary<string, Participant>();
-            _topics = new ConcurrentDictionary<string, CountingItem<PointingTopic>>();
+            _topics = new ConcurrentDictionary<string, CountingItem<VotingTopic>>();
             _options = new ConcurrentDictionary<string, CountingItem<PointingOption>>();
 
             AddParticipant(new Participant("1", "JoeBob1"));
@@ -50,8 +50,11 @@ namespace PointingPoker.Data
             AddParticipant(new Participant("13", "JoeBob13"));
 
             // Pre-poplate topics
-            AddTopic(new PointingTopic("Default Story 1", "some discussion"));
-            AddTopic(new PointingTopic("Default Story 2", "other discussion"));
+            AddTopic(new Topic("Default Story 1", "some discussion"));
+            AddTopic(new Topic("Default Story 2", "other discussion"));
+            AddTopic(new Topic("Default Story 3", "other discussion"));
+            AddTopic(new Topic("Default Story 4", "other discussion"));
+            AddTopic(new Topic("Default Story 5", "other discussion"));
 
             // Pre-populate options
             AddOption(new PointingOption("0 points", "0"));
@@ -68,83 +71,17 @@ namespace PointingPoker.Data
 
         public string Id { get; } = string.Empty;
 
-        public IEnumerable<PointingTopic> Topics => _topics.OrderBy(o => o.Value.Count).Select(o => o.Value.Item).ToArray();
+        public IEnumerable<VotingTopic> Topics => _topics.OrderBy(o => o.Value.Count).Select(o => o.Value.Item).ToArray();
 
         public IEnumerable<PointingOption> Options => _options.OrderBy(o => o.Value.Count).Select(o => o.Value.Item).ToArray();
 
         public IEnumerable<Participant> Participants => _participants.Select(o => o.Value).ToArray();
 
-        //public Vote FindVote(string userId, string optionId)
-        //{
-        //    if (!string.IsNullOrEmpty(topicId) && _topics.TryGetValue(topicId, out var topic))
-        //    {
-        //        return topic.Item;
-        //    }
-
-        //    return null;
-        //}
-
-        //public void AddTopic(PointingTopic topic)
-        //{
-        //    // Sanity check
-        //    if (_topics.Count > MAX_TOPICS)
-        //    {
-        //        throw new InvalidOperationException($"Only up to {MAX_TOPICS} topics are supported per session.");
-        //    }
-
-        //    while (!_topics.TryAdd(topic.Id, new CountingItem<PointingTopic>(topic)))
-        //    {
-        //        topic = new PointingTopic(topic.Name, topic.Discussion);
-        //    }
-
-        //    SafeRunAction(OnTopicsChanged);
-        //}
-
-        //public void UpdateTopic(PointingTopic topic)
-        //{
-        //    // Attempt to update until successful or if the option is removed/doesn't exist.
-        //    while (_topics.TryGetValue(topic.Id, out var item) && item.Item.IsModified(topic))
-        //    {
-        //        if (_topics.TryUpdate(topic.Id, new CountingItem<PointingTopic>(item.Count, topic), item))
-        //        {
-        //            SafeRunAction(OnTopicsChanged);
-        //            return;
-        //        }
-        //    }
-
-        //}
-
-        //public void RemoveTopic(string id)
-        //{
-        //    if (_topics.TryRemove(id, out var topic))
-        //    {
-        //        SafeRunAction(OnTopicsChanged);
-        //    }
-        //}
-
-        public IEnumerable<Vote> GetVotesByUser(string userId)
-        {
-            return _votes
-                .Where(v => v.Value.UserId == userId)
-                .Select(v => v.Value)
-                .ToArray();
-        }
-
-        public IEnumerable<Vote> GetVotesByTopic(string topicId)
-        {
-            return _votes
-                .Where(v => v.Value.TopicId == topicId)
-                .Select(v => v.Value)
-                .ToArray();
-        }
-
         public Vote GetVoteByUserAndTopic(string userId, string topicId)
         {
-            if (!string.IsNullOrEmpty(userId)
-                && !string.IsNullOrEmpty(topicId)
-                && _votes.TryGetValue(GetVoteKey(userId, topicId), out var vote))
+            if (_topics.TryGetValue(topicId, out var topic))
             {
-                return vote;
+                return topic.Item.Votes.FirstOrDefault(v => v.UserId == userId);
             }
 
             return null;
@@ -153,7 +90,8 @@ namespace PointingPoker.Data
         public void Vote(string userId, string topicId, string optionId)
         {
             var vote = new Vote(userId, topicId, optionId);
-            _votes.AddOrUpdate(GetVoteKey(userId, topicId), vote, (key, exisitingVote) => vote);
+
+            _topics.AddOrUpdate(topicId, key => new CountingItem<VotingTopic>( vote, (key, exisitingVote) => vote);
 
             SafeRunAction(OnVotesChanged);
         }
@@ -187,7 +125,7 @@ namespace PointingPoker.Data
             }
         }
 
-        public PointingTopic FindTopic(string topicId)
+        public VotingTopic FindTopic(string topicId)
         {
             if (!string.IsNullOrEmpty(topicId) && _topics.TryGetValue(topicId, out var topic))
             {
@@ -197,7 +135,7 @@ namespace PointingPoker.Data
             return null;
         }
 
-        public void AddTopic(PointingTopic topic)
+        public void AddTopic(Topic topic)
         {
             // Sanity check
             if (_topics.Count > MAX_TOPICS)
@@ -205,20 +143,20 @@ namespace PointingPoker.Data
                 throw new InvalidOperationException($"Only up to {MAX_TOPICS} topics are supported per session.");
             }
 
-            while (!_topics.TryAdd(topic.Id, new CountingItem<PointingTopic>(topic)))
+            while (!_topics.TryAdd(topic.Id, new CountingItem<VotingTopic>(new VotingTopic(topic, false))))
             {
-                topic = new PointingTopic(topic.Name, topic.Discussion);
+                topic = new Topic(topic.Name, topic.Discussion);
             }
 
             SafeRunAction(OnTopicsChanged);
         }
 
-        public void UpdateTopic(PointingTopic topic)
+        public void UpdateTopic(Topic topic)
         {
             // Attempt to update until successful or if the option is removed/doesn't exist.
-            while (_topics.TryGetValue(topic.Id, out var item) && item.Item.IsModified(topic))
+            while (_topics.TryGetValue(topic.Id, out var item) && item.Item.Topic.IsModified(topic))
             {
-                if (_topics.TryUpdate(topic.Id, new CountingItem<PointingTopic>(item.Count, topic), item))
+                if (_topics.TryUpdate(topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(topic, false)), item))
                 {
                     SafeRunAction(OnTopicsChanged);
                     return;
@@ -272,8 +210,6 @@ namespace PointingPoker.Data
                 SafeRunAction(OnOptionsChanged);
             }
         }
-
-        private string GetVoteKey(string userId, string topicId) => $"{userId}:{topicId}";
 
         private void SafeRunAction(Action action)
         {

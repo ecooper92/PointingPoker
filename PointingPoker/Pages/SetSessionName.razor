@@ -1,0 +1,95 @@
+﻿@page "/name/{sessionId}"
+
+@implements IDisposable
+@using PointingPoker.Data
+@using PointingPoker.Shared
+@inject UserManager UserManager
+@inject NavigationManager NavigationManager
+@inject PointingSessionManager PointingSessionManager
+
+@if (_isLoading)
+{
+<h3 class="text-center m-auto">Loading...</h3>
+}
+else if (_session == null)
+{
+<h3 class="text-center m-auto">Woops! Couldn't find your session :(</h3>
+}
+else
+{
+<div class="configure-container overflow-auto">
+    <div class="container">
+        <div class="row mt-4 mb-4">
+            <h2 class="text-center col-8 offset-2">Configure Session</h2>
+            @if (!_isLoading && _session != null)
+            {
+                <div class="col-2">
+                    <button class="float-right btn btn-primary" @onclick="JoinSession">Join</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+}
+
+
+
+@code {
+    private bool _isLoading = true;
+    private string _userId = string.Empty;
+    private PointingSession _session = null;
+
+    [Parameter]
+    public string SessionId { get; set; } = string.Empty;
+
+    public string Username { get; set; } = string.Empty;
+
+    protected override void OnInitialized()
+    {
+            _session = PointingSessionManager.Get(SessionId);
+            if (_session != null)
+            {
+                _session.OnOptionsChanged += OnOptionsChanged;
+            }
+
+            _isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+            if (firstRender && _session != null)
+            {
+                _userId = await UserManager.GetUserIdAsync();
+                Username = _session.FindParticipant(_userId)?.Name ?? string.Empty;
+                StateHasChanged();
+            }
+    }
+
+    public void Dispose()
+    {
+            if (_session != null)
+            {
+                _session.OnOptionsChanged -= OnOptionsChanged;
+            }
+    }
+
+    private void OnOptionsChanged() => InvokeAsync(StateHasChanged);
+
+    private void AddPointingOption()
+    {
+            _session.AddOption(new PointingOption("?", "?"));
+    }
+
+    private void UpdatePointingOption(string id, string name, string value)
+    {
+            _session.UpdateOption(new PointingOption(id, name, value));
+    }
+
+    private void JoinSession()
+    {
+            var participant = new Participant(_userId, Username);
+            _session.AddParticipant(participant);
+
+            NavigationManager.NavigateTo($"/pointing/{_session.Id}");
+    }
+}
