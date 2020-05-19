@@ -38,7 +38,7 @@ else
                 @if (Participant != null)
                 {
                     <div class="pointing-session-control-container d-flex flex-wrap flex-row pl-2">
-                        <button @onclick="(e => _session.ShowVotes(SelectedTopic.Topic.Id))" class="btn pointing-session-control oi oi-eye m-2" title="Show Votes" />
+                        <button @onclick="(e => _session.SetVotesShowing(SelectedTopic.Topic.Id, !SelectedTopic.IsShowing))" class="btn pointing-session-control oi oi-eye m-2 @(SelectedTopic.IsShowing ? "highlight" : "")" title="@(SelectedTopic.IsShowing ? "Hide Votes" : "Show Votes")" />
                         <button @onclick="(e => _session.ResetVotes(SelectedTopic.Topic.Id))" class="btn pointing-session-control oi oi-reload m-2" title="Reset Votes" />
                     </div>
                 }

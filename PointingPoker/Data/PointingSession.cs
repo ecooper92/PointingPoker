@@ -118,11 +118,11 @@ namespace PointingPoker.Data
             }
         }
 
-        public void ShowVotes(string topicId)
+        public void SetVotesShowing(string topicId, bool isShowing)
         {
             while (_topics.TryGetValue(topicId, out var item))
             {
-                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, true, item.Item.Votes)), item))
+                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, isShowing, item.Item.Votes)), item))
                 {
                     SafeRunAction(OnTopicsChanged);
                     SafeRunAction(OnVotesChanged);

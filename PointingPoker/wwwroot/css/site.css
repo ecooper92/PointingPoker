@@ -113,6 +113,11 @@ a, .btn-link {
 
 .pointing-session-control {
     font-size: 16pt;
+    transition: color 0.5s;
+}
+
+.pointing-session-control.highlight {
+    color: limegreen;
 }
 
 .pointing-session-topic-container {
