@@ -99,11 +99,34 @@ namespace PointingPoker.Data
 
                 if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, item.Item.IsShowing, votes)), item))
                 {
+                    SafeRunAction(OnVotesChanged);
                     break;
                 }
             }
+        }
 
-            SafeRunAction(OnVotesChanged);
+        public void ResetVotes(string topicId)
+        {
+            while (_topics.TryGetValue(topicId, out var item))
+            {
+                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, false, null)), item))
+                {
+                    SafeRunAction(OnVotesChanged);
+                    break;
+                }
+            }
+        }
+
+        public void ShowVotes(string topicId)
+        {
+            while (_topics.TryGetValue(topicId, out var item))
+            {
+                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, true, item.Item.Votes)), item))
+                {
+                    SafeRunAction(OnVotesChanged);
+                    break;
+                }
+            }
         }
 
         public Participant FindParticipant(string userId)
@@ -172,7 +195,6 @@ namespace PointingPoker.Data
                     return;
                 }
             }
-
         }
 
         public void RemoveTopic(string id)

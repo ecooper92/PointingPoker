@@ -40,13 +40,6 @@ else
                         <button @onclick="(e => ChangeSelectedTopic(topic.Topic.Id))" class="btn pointing-session-topic-topic-text pt-1 pb-1 pl-2 pr-2 m-2 @(SelectedTopic != null && SelectedTopic.Topic.Id == topic.Topic.Id ? "selected":"")">@topic.Topic.Name</button>
                     }
                 </div>
-                <div class="pointing-session-topic-container d-flex flex-wrap flex-row pl-2">
-                    <button @onclick="AddTopic" class="btn pointing-session-topic-topic-text oi oi-plus m-2" />
-                    @foreach (var topic in _session.Topics)
-                    {
-                        <button @onclick="(e => ChangeSelectedTopic(topic.Topic.Id))" class="btn pointing-session-topic-topic-text pt-1 pb-1 pl-2 pr-2 m-2 @(SelectedTopic != null && SelectedTopic.Topic.Id == topic.Topic.Id ? "selected":"")">@topic.Topic.Name</button>
-                    }
-                </div>
 
                 <div class="container p-2">
                     <div class="d-flex flex-column">
