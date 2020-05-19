@@ -25,21 +25,9 @@ else
                 @if (!_isLoading && _session != null)
                 {
                     <div class="col-2">
-                        <button class="float-right btn btn-primary" @onclick="JoinSession">Join</button>
+                        <a class="float-right btn btn-primary" href="/pointing/@_session.Id">Join</a>
                     </div>
                 }
-            </div>
-            <div class="row mb-4">
-                <div class="card col-12">
-                    <div class="card-body">
-                        <div class="row">
-                            <h4 class="card-title text-center col-12">Participant</h4>
-                        </div>
-                        <div class="row">
-                            <input class="form-control col-12" placeholder="Name" @bind="@Username" />
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <div class="row">
