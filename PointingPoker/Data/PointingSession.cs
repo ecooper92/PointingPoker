@@ -91,7 +91,17 @@ namespace PointingPoker.Data
         {
             var vote = new Vote(userId, topicId, optionId);
 
-            _topics.AddOrUpdate(topicId, key => new CountingItem<VotingTopic>( vote, (key, exisitingVote) => vote);
+            while (_topics.TryGetValue(topicId, out var item))
+            {
+                var votes = item.Item.Votes.ToList();
+                votes.RemoveAll(v => v.UserId == userId && v.TopicId == topicId);
+                votes.Add(vote);
+
+                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, item.Item.IsShowing, votes)), item))
+                {
+                    break;
+                }
+            }
 
             SafeRunAction(OnVotesChanged);
         }
@@ -143,7 +153,7 @@ namespace PointingPoker.Data
                 throw new InvalidOperationException($"Only up to {MAX_TOPICS} topics are supported per session.");
             }
 
-            while (!_topics.TryAdd(topic.Id, new CountingItem<VotingTopic>(new VotingTopic(topic, false))))
+            while (!_topics.TryAdd(topic.Id, new CountingItem<VotingTopic>(new VotingTopic(topic, false, null))))
             {
                 topic = new Topic(topic.Name, topic.Discussion);
             }
@@ -156,7 +166,7 @@ namespace PointingPoker.Data
             // Attempt to update until successful or if the option is removed/doesn't exist.
             while (_topics.TryGetValue(topic.Id, out var item) && item.Item.Topic.IsModified(topic))
             {
-                if (_topics.TryUpdate(topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(topic, false)), item))
+                if (_topics.TryUpdate(topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(topic, item.Item.IsShowing, item.Item.Votes)), item))
                 {
                     SafeRunAction(OnTopicsChanged);
                     return;
