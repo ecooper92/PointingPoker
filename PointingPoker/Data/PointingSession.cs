@@ -111,6 +111,7 @@ namespace PointingPoker.Data
             {
                 if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, false, null)), item))
                 {
+                    SafeRunAction(OnTopicsChanged);
                     SafeRunAction(OnVotesChanged);
                     break;
                 }
@@ -123,6 +124,7 @@ namespace PointingPoker.Data
             {
                 if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, true, item.Item.Votes)), item))
                 {
+                    SafeRunAction(OnTopicsChanged);
                     SafeRunAction(OnVotesChanged);
                     break;
                 }

@@ -1,5 +1,7 @@
 ﻿@page "/pointing/{sessionId}"
 
+@layout SessionLayout
+
 @implements IDisposable
 @using PointingPoker.Data
 @inject UserManager UserManager
@@ -27,12 +29,19 @@ else
                         <span class="oi oi-person voting-participant-icon @(userVote != null ? "voted" : "")" />
                         <div class="voting-participant-text-container d-flex flex-column flex-grow-1 align-items-start pl-2 pt-1 pb-1">
                             <span class="voting-participant-text">@(string.IsNullOrEmpty(participant.Name) ? "<No name>" : participant.Name)</span>
-                            <div class="voting-participant-status">@(voteOption != null ? voteOption.Name : "Waiting...")</div>
+                            <div class="voting-participant-status">@(voteOption == null ? "Waiting..." : (!SelectedTopic.IsShowing ? "Voted!" : voteOption.Name))</div>
                         </div>
                     </div>
                 }
             </div>
             <div class="pointing-session-right d-flex flex-column flex-grow-1">
+                @if (Participant != null)
+                {
+                    <div class="pointing-session-control-container d-flex flex-wrap flex-row pl-2">
+                        <button @onclick="(e => _session.ShowVotes(SelectedTopic.Topic.Id))" class="btn pointing-session-control oi oi-eye m-2" title="Show Votes" />
+                        <button @onclick="(e => _session.ResetVotes(SelectedTopic.Topic.Id))" class="btn pointing-session-control oi oi-reload m-2" title="Reset Votes" />
+                    </div>
+                }
                 <div class="pointing-session-topic-container d-flex flex-wrap flex-row pl-2">
                     <button @onclick="AddTopic" class="btn pointing-session-topic-topic-text oi oi-plus m-2" />
                     @foreach (var topic in _session.Topics)
