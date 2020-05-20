@@ -25,7 +25,7 @@ namespace PointingPoker.Data
 
         private static int _counter;
 
-        public PointingSession() : this(Interlocked.Increment(ref _counter).ToString()/*Guid.NewGuid().ToString()*/) { }
+        public PointingSession() : this(Guid.NewGuid().ToString()) { }
 
         public PointingSession(string id)
         {
@@ -35,26 +35,8 @@ namespace PointingPoker.Data
             _topics = new ConcurrentDictionary<string, CountingItem<VotingTopic>>();
             _options = new ConcurrentDictionary<string, CountingItem<PointingOption>>();
 
-            AddParticipant(new Participant("1", "JoeBob1"));
-            AddParticipant(new Participant("2", "JoeBob2"));
-            AddParticipant(new Participant("3", "JoeBob3"));
-            AddParticipant(new Participant("4", "JoeBob4"));
-            AddParticipant(new Participant("5", "JoeBob5"));
-            AddParticipant(new Participant("6", "JoeBob6"));
-            AddParticipant(new Participant("7", "JoeBob7"));
-            AddParticipant(new Participant("8", "JoeBob8"));
-            AddParticipant(new Participant("9", "JoeBob9"));
-            AddParticipant(new Participant("10", "JoeBob10"));
-            AddParticipant(new Participant("11", "JoeBob11"));
-            AddParticipant(new Participant("12", "JoeBob12"));
-            AddParticipant(new Participant("13", "JoeBob13"));
-
             // Pre-poplate topics
             AddTopic(new Topic("Default Story 1", "some discussion"));
-            AddTopic(new Topic("Default Story 2", "other discussion"));
-            AddTopic(new Topic("Default Story 3", "other discussion"));
-            AddTopic(new Topic("Default Story 4", "other discussion"));
-            AddTopic(new Topic("Default Story 5", "other discussion"));
 
             // Pre-populate options
             AddOption(new PointingOption("0 points", "0"));
@@ -161,10 +143,32 @@ namespace PointingPoker.Data
             SafeRunAction(OnParticipantsChanged);
         }
 
-        public void RemoveParticipant(string participantId)
+        public void RemoveParticipant(string userId)
         {
-            if (_participants.TryRemove(participantId, out var participant))
+            if (_participants.TryRemove(userId, out var participant))
             {
+                var voteRemoved = false;
+                foreach (var topic in Topics)
+                {
+                    while (_topics.TryGetValue(topic.Topic.Id, out var item))
+                    {
+                        var votes = item.Item.Votes.ToList();
+                        votes.RemoveAll(v => v.UserId == userId);
+
+                        if (_topics.TryUpdate(topic.Topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, item.Item.IsShowing, votes)), item))
+                        {
+                            voteRemoved = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (voteRemoved)
+                {
+                    SafeRunAction(OnTopicsChanged);
+                    SafeRunAction(OnVotesChanged);
+                }
+
                 SafeRunAction(OnParticipantsChanged);
             }
         }
@@ -252,10 +256,31 @@ namespace PointingPoker.Data
 
         }
 
-        public void RemoveOption(string id)
+        public void RemoveOption(string optionId)
         {
-            if (_options.TryRemove(id, out var option))
+            if (_options.TryRemove(optionId, out var option))
             {
+                var voteRemoved = false;
+                foreach (var topic in Topics)
+                {
+                    while (_topics.TryGetValue(topic.Topic.Id, out var item))
+                    {
+                        var votes = item.Item.Votes.ToList();
+                        votes.RemoveAll(v => v.OptionId == optionId);
+
+                        if (_topics.TryUpdate(topic.Topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, item.Item.IsShowing, votes)), item))
+                        {
+                            voteRemoved = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (voteRemoved)
+                {
+                    SafeRunAction(OnTopicsChanged);
+                    SafeRunAction(OnVotesChanged);
+                }
                 SafeRunAction(OnOptionsChanged);
             }
         }

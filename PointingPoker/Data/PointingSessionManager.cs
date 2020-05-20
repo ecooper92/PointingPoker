@@ -16,6 +16,11 @@ namespace PointingPoker.Data
 
         public IEnumerable<PointingSession> FindByUser(string userId)
         {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return new PointingSession[0];
+            }
+
             return _sessions
                 .Where(s => s.Value.FindParticipant(userId) != null)
                 .Select(s => s.Value)

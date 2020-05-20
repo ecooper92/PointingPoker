@@ -14,7 +14,7 @@ else
     <div class="index-container overflow-auto">
         <div class="container">
             <div class="row">
-                <div class="col-sm m-2">
+                <div class="col-lg-6 mb-2">
                     <div class="card ">
                         <img class="card-img-top" src="create.jpg" alt="Create">
                         <div class="card-body">
@@ -24,17 +24,27 @@ else
                         </div>
                     </div>
                 </div>
-                <div class="col-sm m-2">
+                <div class="col-lg-6 mb-2">
                     <div class="card">
                         <img class="card-img-top" src="join-sm.jpg" alt="Join">
                         <div class="card-body">
                             <h5 class="card-title">Join a session</h5>
                             <p class="card-text">Join an existing session for your group to assign values to stories.</p>
-                            <div class="d-flex flex-row">
+                            <div class="d-flex flex-row align-items-center">
                                 <div class="flex-grow-1">
-                                    <input @bind="_sessionId" type="text" placeholder="Session Id#" class="form-control" />
+                                    <input @bind="_inputSessionId" type="text" placeholder="Session Id#" class="form-control" />
                                 </div>
-                                <a href="#" @onclick="JoinPointingSession" class="btn btn-primary ml-2">Join</a>
+                                <a href="#" @onclick="e => JoinPointingSession(_inputSessionId)" class="btn btn-primary ml-2">Join</a>
+                                <span class="ml-3 mr-3">OR</span>
+                                <div class="flex-grow-1">
+                                    <select @bind="_selectSessionId" class="form-control">
+                                        @foreach (var session in PointingSessionManager.FindByUser(_userId))
+                                        {
+                                            <option value="@session.Id">@session.Id</option>
+                                        }
+                                    </select>
+                                </div>
+                                <a href="#" @onclick="e => JoinPointingSession(_selectSessionId)" class="btn btn-primary ml-2">Join</a>
                             </div>
                         </div>
                     </div>
@@ -45,25 +55,33 @@ else
 }
 
 @code {
-    private bool _isLoading = false;
-    private string _sessionId = string.Empty;
+    private bool _isLoading = true;
+    private string _inputSessionId = string.Empty;
+    private string _selectSessionId = string.Empty;
+    private string _userId = string.Empty;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var userId = await UserManager.GetUserIdAsync();
+        if (firstRender)
+        {
+            _userId = await UserManager.GetUserIdAsync();
+            _selectSessionId = PointingSessionManager.FindByUser(_userId).FirstOrDefault()?.Id;
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
 
     private void CreatePointingSession()
     {
         var session = PointingSessionManager.Create();
-        NavigationManager.NavigateTo($"/configure/{session.Id}");
+        NavigationManager.NavigateTo($"/pointing/{session.Id}");
     }
 
-    private void JoinPointingSession()
+    private void JoinPointingSession(string sessionId)
     {
-        if (!string.IsNullOrEmpty(_sessionId))
+        if (!string.IsNullOrEmpty(sessionId))
         {
-            NavigationManager.NavigateTo($"/configure/{_sessionId}");
+            NavigationManager.NavigateTo($"/pointing/{sessionId}");
         }
     }
 }
