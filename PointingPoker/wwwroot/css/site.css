@@ -22,6 +22,11 @@ app {
     background-color: #FFFFFF;
 }
 
+.logo {
+    width:100%;
+    height:100%;
+}
+
 .top-row .logo-text {
     font-size: 14pt;
     color: #000000;
