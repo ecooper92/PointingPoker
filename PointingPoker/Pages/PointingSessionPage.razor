@@ -4,9 +4,18 @@
 
 @implements IDisposable
 @using PointingPoker.Data
+@using ChartJs.Blazor;
+@using ChartJs.Blazor.ChartJS.BarChart
+@using ChartJs.Blazor.ChartJS.Common.Axes
+@using ChartJs.Blazor.ChartJS.Common.Axes.Ticks
+@using ChartJs.Blazor.ChartJS.Common.Enums
+@using ChartJs.Blazor.ChartJS.Common.Properties
+@using ChartJs.Blazor.ChartJS.Common.Wrappers
+@using ChartJs.Blazor.Charts
+@using ChartJs.Blazor.Util
 @inject UserManager UserManager
+@inject NavigationManager NavigationManager
 @inject PointingSessionManager PointingSessionManager
-
 
 @if (_isLoading)
 {
@@ -18,87 +27,96 @@ else if (_session == null)
 }
 else
 {
-<div class="pointing-session w-100 h-100 d-flex flex-column">
-    <div class="pointing-session-top d-flex flex-row flex-grow-1">
-        <div class="pointing-session-left d-flex flex-column flex-shrink-0">
-            @foreach (var participant in _session.Participants)
-            {
-                var userVote = _session.GetVoteByUserAndTopic(participant.UserId, SelectedTopic?.Topic.Id);
-                var voteOption = _session.Options.FirstOrDefault(o => o.Id == userVote?.OptionId);
-                <div class="voting-participant d-flex flex-row pl-3 pr-3 align-items-center">
-                    <span class="oi oi-person voting-participant-icon @(userVote != null ? "voted" : "")" />
-                    <div class="voting-participant-text-container d-flex flex-column flex-grow-1 align-items-start pl-2 pt-1 pb-1">
-                        <span class="voting-participant-text">@(string.IsNullOrEmpty(participant.Name) ? "<No name>" : participant.Name)</span>
-                        <div class="voting-participant-status">@(voteOption == null ? "Waiting..." : (!SelectedTopic.IsShowing ? "Voted!" : voteOption.Name))</div>
-                    </div>
-                </div>
-            }
-        </div>
-        <div class="pointing-session-right d-flex flex-column flex-grow-1">
-            @if (Participant != null)
-            {
-                <div class="pointing-session-control-container d-flex flex-wrap flex-row pl-2">
-                    <button @onclick="(e => _session.SetVotesShowing(SelectedTopic.Topic.Id, !SelectedTopic.IsShowing))" class="btn pointing-session-control oi oi-eye m-2 @(SelectedTopic.IsShowing ? "highlight" : "")" title="@(SelectedTopic.IsShowing ? "Hide Votes" : "Show Votes")" />
-                    <button @onclick="(e => _session.ResetVotes(SelectedTopic.Topic.Id))" class="btn pointing-session-control oi oi-reload m-2" title="Reset Votes" />
-                </div>
-            }
-            <div class="pointing-session-topic-container d-flex flex-wrap flex-row pl-2">
-                <button @onclick="AddTopic" class="btn pointing-session-topic-topic-text oi oi-plus m-2" />
-                @foreach (var topic in _session.Topics)
+    <div class="pointing-session w-100 h-100 d-flex flex-column">
+        <div class="pointing-session-top d-flex flex-row flex-grow-1">
+            <div class="pointing-session-left d-flex flex-column flex-shrink-0">
+                @foreach (var participant in _session.Participants)
                 {
-                    <button @onclick="(e => ChangeSelectedTopic(topic.Topic.Id))" class="btn pointing-session-topic-topic-text pt-1 pb-1 pl-2 pr-2 m-2 @(SelectedTopic != null && SelectedTopic.Topic.Id == topic.Topic.Id ? "selected":"")">@topic.Topic.Name</button>
+                    var userVote = _session.GetVoteByUserAndTopic(participant.UserId, SelectedTopicId);
+                    var voteOption = _session.Options.FirstOrDefault(o => o.Id == userVote?.OptionId);
+                    <div class="voting-participant d-flex flex-row pl-3 pr-3 align-items-center">
+                        <span class="oi oi-person voting-participant-icon @(userVote != null ? "voted" : "")" />
+                        <div class="voting-participant-text-container d-flex flex-column flex-grow-1 align-items-start pl-2 pt-1 pb-1">
+                            <span class="voting-participant-text">@(string.IsNullOrEmpty(participant.Name) ? "<No name>" : participant.Name)</span>
+                            <div class="voting-participant-status">@(voteOption == null ? "Waiting..." : (!_session.IsShowingTopic(SelectedTopicId) ? "Voted!" : voteOption.Name))</div>
+                        </div>
+                    </div>
                 }
             </div>
-
-            <div class="container-fluid p-2">
-                <div class="d-flex flex-column">
-                    <div class="d-flex flex-row mt-2 mb-2">
-                        <input class="form-control" type="text" placeholder="Name" value="@SelectedTopic?.Topic.Name" @onchange="(e => UpdatePointingTopic(SelectedTopic.Topic.Id, e.Value.ToString(), SelectedTopic?.Topic.Discussion))" />
+            <div class="pointing-session-right d-flex flex-column flex-grow-1">
+                @if (Participant != null)
+                {
+                    <div class="pointing-session-control-container d-flex flex-wrap flex-row pl-2">
+                        <button @onclick="(e => _session.SetVotesShowing(SelectedTopicId, !_session.IsShowingTopic(SelectedTopicId)))" class="btn pointing-session-control oi oi-eye m-2 @(_session.IsShowingTopic(SelectedTopicId) ? "highlight" : "")" title="@(_session.IsShowingTopic(SelectedTopicId) ? "Hide Votes" : "Show Votes")" />
+                        <button @onclick="(e => _session.ResetVotes(SelectedTopicId))" class="btn pointing-session-control oi oi-reload m-2" title="Reset Votes" />
+                        <button @onclick="ConfigureSession" class="btn pointing-session-control oi oi-cog m-2" title="Configure Session" />
                     </div>
-
-                    <div class="d-flex flex-row mt-2 mb-2">
-                        <textarea class="form-control" placeholder="Discussion..." value="@SelectedTopic?.Topic.Discussion" @onchange="(e => UpdatePointingTopic(SelectedTopic.Topic.Id, SelectedTopic?.Topic.Name, e.Value.ToString()))"></textarea>
-                    </div>
-
-                    @if (Participant != null)
+                }
+                <div class="pointing-session-topic-container d-flex flex-wrap flex-row pl-2">
+                    <button @onclick="AddTopic" class="btn pointing-session-topic-topic-text oi oi-plus m-2" />
+                    @foreach (var topic in _session.Topics)
                     {
-                        <div class="d-flex flex-row mt-2 mb-2 justify-content-around flex-wrap">
-                            @foreach (var option in _session.Options)
-                            {
-                                <button class="btn @(SelectedVote != null && SelectedVote.OptionId == option.Id ? "btn-success":"btn-info") p-2 m-1" @onclick="(e => Vote(option.Id))">@option.Name</button>
-                            }
+                        <button @onclick="(e => ChangeSelectedTopic(topic.Topic.Id))" class="btn pointing-session-topic-topic-text pt-1 pb-1 pl-2 pr-2 m-2 @(SelectedTopicId == topic.Topic.Id ? "selected" : "")">@topic.Topic.Name</button>
+                    }
+                </div>
+
+                <div class="d-flex flex-row flex-wrap">
+                    <div class="col-sm-6 p-2">
+                        <div class="d-flex flex-column">
+                            <div class="d-flex flex-row mt-2 mb-2">
+                                <input class="form-control" type="text" placeholder="Name" value="@_session.FindTopic(SelectedTopicId)?.Topic.Name" @onchange="(e => UpdatePointingTopic(SelectedTopicId, e.Value.ToString(), _session.FindTopic(SelectedTopicId)?.Topic.Discussion))" />
+                            </div>
+
+                            <div class="d-flex flex-row mt-2 mb-2">
+                                <textarea class="form-control" placeholder="Discussion..." value="@_session.FindTopic(SelectedTopicId)?.Topic.Discussion" @onchange="(e => UpdatePointingTopic(SelectedTopicId, _session.FindTopic(SelectedTopicId)?.Topic.Name, e.Value.ToString()))"></textarea>
+                            </div>
                         </div>
-                    }
-                    else
-                    {
-                        <span class="m-a">You are currently spectating, <span class="btn-link" data-toggle="modal" data-target="#JoinSessionWindow">Join</span> the session to participate in voting!</span>
-                    }
+                    </div>
+                    <div class="col-sm-6 p-2">
+                        @if (Participant != null)
+                        {
+                            <div class="d-flex flex-row mt-2 mb-2 justify-content-around flex-wrap">
+                                @foreach (var option in _session.Options)
+                                {
+                                    <button class="btn @(SelectedVote != null && SelectedVote.OptionId == option.Id ? "btn-success":"btn-info") p-2 m-1" @onclick="(e => Vote(option.Id))">@option.Name</button>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="m-a">You are currently spectating, <span class="btn-link" data-toggle="modal" data-target="#JoinSessionWindow">Join</span> the session to participate in voting!</span>
+                        }
+                    </div>
+                </div>
+                
+
+                <div class="voting-results-container flex-grow-1 @(!_session.IsShowingTopic(SelectedTopicId) ? "invisible" : "")">
+                    <ChartJsBarChart @ref="_barChart" Config="@_barChartConfig"></ChartJsBarChart>
+                </div>
+            </div>
+        </div>
+        <div class="pointing-session-bottom">
+        </div>
+        <div class="modal fade" id="JoinSessionWindow" tabindex="-1" role="dialog" aria-labelledby="JoinSessionWindow" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Join Session</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <input class="form-control col-12" placeholder="Participant Name" @bind="@Username" />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" @onclick="(e => Join(Username))" data-dismiss="modal">Join</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="pointing-session-bottom">
-    </div>
-    <div class="modal fade" id="JoinSessionWindow" tabindex="-1" role="dialog" aria-labelledby="JoinSessionWindow" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Join Session</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <input class="form-control col-12" placeholder="Participant Name" @bind="@Username" />
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" @onclick="(e => Join(Username))" data-dismiss="modal">Join</button>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 }
 
 
@@ -106,6 +124,9 @@ else
     private bool _isLoading = true;
     private string _userId = string.Empty;
     private PointingSession _session = null;
+    private BarConfig _barChartConfig;
+    private ChartJsBarChart _barChart;
+    private BarDataset<Int32Wrapper> _barDataSet;
 
     [Parameter]
     public string SessionId { get; set; } = string.Empty;
@@ -114,11 +135,11 @@ else
 
     public Participant Participant { get; set; }
 
-    public VotingTopic SelectedTopic { get; set; }
+    public string SelectedTopicId { get; set; }
 
     public Vote SelectedVote { get; set; }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _session = PointingSessionManager.Get(SessionId);
         if (_session != null)
@@ -127,11 +148,60 @@ else
             _session.OnTopicsChanged += OnTopicsChanged;
             _session.OnOptionsChanged += OnOptionsChanged;
             _session.OnParticipantsChanged += OnParticipantsChanged;
-            SelectedTopic = _session.Topics.FirstOrDefault();
+            SelectedTopicId = _session.Topics.Select(t => t.Topic.Id).FirstOrDefault();
+
+
+            _barChartConfig = new BarConfig(ChartType.Bar)
+            {
+                Options = new BarOptions
+                {
+                    //Title = new ChartJs.Blazor.ChartJS.Common.Properties.OptionsTitle { Display = true, Text = "Results" },
+                    Responsive = true,
+                    MaintainAspectRatio = false,
+                    Scales = new BarScales
+                    {
+                        YAxes = new List<ChartJs.Blazor.ChartJS.Common.Axes.CartesianAxis>
+                    {
+                            new ChartJs.Blazor.ChartJS.Common.Axes.LinearCartesianAxis
+                            {
+                                Ticks = new ChartJs.Blazor.ChartJS.Common.Axes.Ticks.LinearCartesianTicks { AutoSkip = false, Min = 0 }
+                            }
+                        }
+                    }
+                }
+            };
+
+            _barChartConfig.Data.Labels.AddRange(_session.Options.Select(o => o.Name));
+            _barDataSet = new BarDataset<Int32Wrapper>(ChartType.Bar);
+            _barDataSet.Label = "Results";
+            _barDataSet.BorderWidth = 1;
+            _barDataSet.BackgroundColor = _session.Options.Select(o => ColorUtil.RandomColorString()).ToArray();
+            _barChartConfig.Data.Datasets.Add(_barDataSet);
+            await UpdateResultChart();
         }
         else
         {
             _isLoading = false;
+        }
+    }
+
+    private void ConfigureSession()
+    {
+        NavigationManager.NavigateTo($"/configure/{_session.Id}");
+    }
+
+    private async Task UpdateResultChart()
+    {
+        _barDataSet.RemoveAll(e => true);
+        var topic = _session.FindTopic(SelectedTopicId);
+        if (topic != null)
+        {
+            _barDataSet.AddRange(_session.Options.Select(o => topic.Votes.Where(v => v.OptionId == o.Id).Count()).Wrap());
+        }
+
+        if (_barChart != null)
+        {
+            await _barChart.Update();
         }
     }
 
@@ -141,7 +211,7 @@ else
         {
             _userId = await UserManager.GetUserIdAsync();
             Participant = _session.FindParticipant(_userId);
-            SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopic?.Topic.Id);
+            SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopicId);
 
             _isLoading = false;
             StateHasChanged();
@@ -161,8 +231,9 @@ else
 
     private void ChangeSelectedTopic(string topicId)
     {
-        SelectedTopic = _session.FindTopic(topicId);
-        SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopic?.Topic.Id);
+        SelectedTopicId = topicId;
+        SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopicId);
+        UpdateResultChart();
     }
 
     private void AddTopic()
@@ -182,7 +253,7 @@ else
     {
         if (Participant != null)
         {
-            _session.Vote(_userId, SelectedTopic?.Topic.Id, optionId);
+            _session.Vote(_userId, SelectedTopicId, optionId);
         }
     }
 
@@ -193,14 +264,14 @@ else
 
     private void OnVotesChanged()
     {
-        SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopic?.Topic.Id);
+        SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopicId);
+        UpdateResultChart();
         InvokeAsync(StateHasChanged);
     }
 
     private void OnTopicsChanged()
     {
-        SelectedTopic = _session.FindTopic(SelectedTopic?.Topic.Id);
-        SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopic?.Topic.Id);
+        SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopicId);
         InvokeAsync(StateHasChanged);
     }
 

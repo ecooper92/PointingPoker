@@ -32,7 +32,6 @@ namespace PointingPoker
             services.AddBlazoredLocalStorage();
             services.AddTransient<UserManager>();
             services.AddSingleton<PointingSessionManager>();
-            services.AddSingleton<WeatherForecastService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

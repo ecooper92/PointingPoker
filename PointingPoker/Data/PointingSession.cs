@@ -79,7 +79,7 @@ namespace PointingPoker.Data
 
         public Vote GetVoteByUserAndTopic(string userId, string topicId)
         {
-            if (_topics.TryGetValue(topicId, out var topic))
+            if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(topicId) && _topics.TryGetValue(topicId, out var topic))
             {
                 return topic.Item.Votes.FirstOrDefault(v => v.UserId == userId);
             }
@@ -87,8 +87,15 @@ namespace PointingPoker.Data
             return null;
         }
 
-        public void Vote(string userId, string topicId, string optionId)
+        public bool Vote(string userId, string topicId, string optionId)
         {
+            if (string.IsNullOrEmpty(userId)
+                || string.IsNullOrEmpty(topicId)
+                || string.IsNullOrEmpty(optionId))
+            {
+                return false;
+            }
+
             var vote = new Vote(userId, topicId, optionId);
 
             while (_topics.TryGetValue(topicId, out var item))
@@ -100,9 +107,11 @@ namespace PointingPoker.Data
                 if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, item.Item.IsShowing, votes)), item))
                 {
                     SafeRunAction(OnVotesChanged);
-                    break;
+                    return true;
                 }
             }
+
+            return false;
         }
 
         public void ResetVotes(string topicId)
@@ -158,6 +167,12 @@ namespace PointingPoker.Data
             {
                 SafeRunAction(OnParticipantsChanged);
             }
+        }
+
+        public bool IsShowingTopic(string topicId)
+        {
+            var topic = FindTopic(topicId);
+            return topic != null && topic.IsShowing;
         }
 
         public VotingTopic FindTopic(string topicId)
