@@ -414,7 +414,7 @@ else
     {
         if (!string.IsNullOrEmpty(Username))
         {
-            var participant = new Participant(_userId, Username);
+            var participant = new Participant(_userId, Username, ParticipantType.Voter);
             _session.AddParticipant(participant);
 
             Participant = participant;
