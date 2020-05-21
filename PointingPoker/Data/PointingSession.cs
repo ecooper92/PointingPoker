@@ -25,7 +25,7 @@ namespace PointingPoker.Data
 
         private static int _counter;
 
-        public PointingSession() : this(Guid.NewGuid().ToString()) { }
+        public PointingSession() : this(Interlocked.Increment(ref _counter).ToString()) { }//Guid.NewGuid().ToString()) { }
 
         public PointingSession(string id)
         {

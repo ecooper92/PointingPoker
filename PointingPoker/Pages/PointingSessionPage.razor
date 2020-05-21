@@ -1,6 +1,5 @@
 ﻿@page "/pointing/{sessionId}"
-
-@layout SessionLayout
+@*@layout SessionLayout*@
 
 @implements IDisposable
 @using PointingPoker.Data
@@ -13,21 +12,122 @@
 @using ChartJs.Blazor.ChartJS.Common.Wrappers
 @using ChartJs.Blazor.Charts
 @using ChartJs.Blazor.Util
+@inject IJSRuntime JSRuntime;
 @inject UserManager UserManager
 @inject NavigationManager NavigationManager
 @inject PointingSessionManager PointingSessionManager
 
 @if (_isLoading)
 {
-    <h3 class="text-center m-auto">Loading...</h3>
+<h3 class="text-center m-auto">Loading...</h3>
 }
 else if (_session == null)
 {
-    <h3 class="text-center m-auto">Woops! Couldn't find your session :(</h3>
+<h3 class="text-center m-auto">Woops! Couldn't find your session :(</h3>
 }
 else
 {
-    <div class="pointing-session w-100 h-100 d-flex flex-column">
+<div class="w-100 h-100 p-3">
+    <div class="main-row d-flex h-100">
+        <div class="story-column flex-shrink-0">
+            <div class="card h-100">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var topic in _session.Topics)
+                                {
+                        <tr>
+                            <td>@topic.Topic.Name</td>
+                            <td>Upcoming</td>
+                            <td>0.3</td>
+                        </tr>
+                                }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="voting-column flex-grow-1">
+            <div class="card h-100">
+                <ul class="nav" style="width:max-content">
+                    <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#voting-view">Voting</a></li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#results-view">Results</a></li>
+                </ul>
+                <div class="card-body p-0 border-top" style="min-height:0">
+                    <div class="tab-content h-100">
+                        <div id="voting-view" class="tab-pane active">
+                            <div class="d-flex flex-column w-100 h-100">
+                                <div class="pointing-session-control-container d-flex flex-wrap flex-row pl-2">
+                                    <button @onclick="(e => _session.SetVotesShowing(SelectedTopicId, !_session.IsShowingTopic(SelectedTopicId)))" class="btn pointing-session-control oi oi-eye m-2 @(_session.IsShowingTopic(SelectedTopicId) ? "highlight" : "")" title="@(_session.IsShowingTopic(SelectedTopicId) ? "Hide Votes" : "Show Votes")" />
+                                    <button @onclick="(e => _session.ResetVotes(SelectedTopicId))" class="btn pointing-session-control oi oi-reload m-2" title="Reset Votes" />
+                                    <button class="btn pointing-session-control oi oi-cog m-2" data-toggle="modal" data-target="#ConfigureSessionWindow" title="Configure Session" />
+                                </div>
+                                <div class="d-flex flex-row w-100 flex-grow-1" style="min-height:0">
+                                    <div id="participant-column" class="d-flex flex-column flex-shrink-0 h-100 border-right" style="overflow-y:auto; overflow-x:hidden">
+                                        <h6 class="m-2">Participants</h6>
+                                        @foreach (var participant in _session.Participants)
+                                        {
+                                            var userVote = _session.GetVoteByUserAndTopic(participant.UserId, SelectedTopicId);
+                                            var voteOption = _session.Options.FirstOrDefault(o => o.Id == userVote?.OptionId);
+                                            <div class="voting-participant d-flex flex-row pl-3 pr-3 align-items-center">
+                                                <span class="oi oi-person voting-participant-icon @(userVote != null ? "voted" : "")" />
+                                                <div class="voting-participant-text-container d-flex flex-column flex-grow-1 align-items-start pl-2 pt-1 pb-1 pr-2">
+                                                    <span class="voting-participant-text">@(string.IsNullOrEmpty(participant.Name) ? "<No name>" : participant.Name)</span>
+                                                    <div class="voting-participant-status">@(voteOption == null ? "Waiting..." : (!_session.IsShowingTopic(SelectedTopicId) ? "Voted!" : voteOption.Name))</div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="d-flex flex-row mt-2 mb-2 justify-content-around flex-wrap w-100" style="overflow-y:auto; overflow-x:hidden">
+                                        @foreach (var option in _session.Options)
+                                        {
+                                            <div class="voting-button-wrapper p-2">
+                                                <button class="voting-button w-100 h-100 btn @(SelectedVote != null && SelectedVote.OptionId == option.Id ? "btn-outline-success":"btn-outline-info") p-2 m-1" @onclick="(e => Vote(option.Id))">@option.Name</button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="results-view" class="tab-pane">
+                            <ChartJsBarChart @ref="_barChart" Config="@_barChartConfig"></ChartJsBarChart>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Modals *@
+    @* Join session modal *@
+    <div class="modal fade active show" id="JoinSessionWindow" tabindex="-1" role="dialog" aria-labelledby="JoinSessionWindow" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Join Session</h5>
+                    @*<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>*@
+                </div>
+                <div class="modal-body">
+                    <input class="form-control col-12" placeholder="Participant Name" @bind="@Username" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary @(string.IsNullOrEmpty(Username) ? "disabled" : "")" @onclick="Join" data-dismiss="@(!string.IsNullOrEmpty(Username) ? "modal" : "")">Join</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@*<div class="pointing-session w-100 h-100 d-flex flex-column">
         <div class="pointing-session-top d-flex flex-row flex-grow-1">
             <div class="pointing-session-left d-flex flex-column flex-shrink-0">
                 @foreach (var participant in _session.Participants)
@@ -89,11 +189,6 @@ else
                         }
                     </div>
                 </div>
-                
-
-                <div class="voting-results-container flex-grow-1">
-                    <ChartJsBarChart @ref="_barChart" Config="@_barChartConfig"></ChartJsBarChart>
-                </div>
             </div>
         </div>
         <div class="pointing-session-bottom">
@@ -133,7 +228,6 @@ else
                                 <button class="btn btn-primary float-right" @onclick="AddPointingOption">Add</button>
                             </div>
                         </div>
-                        @*<p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>*@
                         <table class="table">
                             <thead>
                                 <tr>
@@ -165,7 +259,7 @@ else
                 </div>
             </div>
         </div>
-    </div>
+    </div>*@
 }
 
 
@@ -264,6 +358,11 @@ else
 
             _isLoading = false;
             StateHasChanged();
+
+            if (Participant == null)
+            {
+                await JSRuntime.InvokeAsync<string>("showJoinSession");
+            }
         }
     }
 
@@ -311,12 +410,15 @@ else
         _session.AddTopic(new Topic("New", ""));
     }
 
-    private void Join(string username)
+    private void Join()
     {
-        var participant = new Participant(_userId, username);
-        _session.AddParticipant(participant);
+        if (!string.IsNullOrEmpty(Username))
+        {
+            var participant = new Participant(_userId, Username);
+            _session.AddParticipant(participant);
 
-        Participant = participant;
+            Participant = participant;
+        }
     }
 
     private void Vote(string optionId)

@@ -5,6 +5,6 @@
   </PropertyGroup>
   <PropertyGroup>
     <ActiveDebugProfile>Docker</ActiveDebugProfile>
-    <NameOfLastUsedPublishProfile>FastPointingPoker</NameOfLastUsedPublishProfile>
+    <NameOfLastUsedPublishProfile>AgilityPoker</NameOfLastUsedPublishProfile>
   </PropertyGroup>
 </Project>
