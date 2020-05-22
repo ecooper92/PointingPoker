@@ -110,11 +110,6 @@ a, .btn-link {
     overflow-x: hidden;
 }
 
-.pointing-session-control-container {
-    background-color: white;
-    border-bottom: 1px solid #ECECEC;
-}
-
 .pointing-session-control {
     font-size: 16pt;
     transition: color 0.5s;

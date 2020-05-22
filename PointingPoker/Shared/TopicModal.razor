@@ -1,0 +1,19 @@
+﻿<Modal @ref="_modal" Validate="@Validate" OnSubmit="@DoSubmit" OnClose="@Clear">
+    <TopicEditor @ref="_editor" OnChange="StateHasChanged" />
+</Modal>
+
+@code {
+    private Modal _modal;
+    private TopicEditor _editor;
+
+    [Parameter]
+    public Action<string, string> Command { get; set; }
+
+    public async Task Show(string title) => await _modal.Show(title);
+
+    public bool Validate() => !string.IsNullOrEmpty(_editor?.Name) && !string.IsNullOrEmpty(_editor?.Description);
+
+    public void DoSubmit() => Command?.Invoke(_editor.Name, _editor.Description);
+
+    public void Clear() => _editor.Clear();
+}

@@ -1,0 +1,95 @@
+﻿@inject IJSRuntime JSRuntime;
+
+<div class="modal fade active show" id="@_windowId" tabindex="-1" role="dialog" aria-labelledby="@_windowId" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                @if (!string.IsNullOrEmpty(Title))
+                {
+                    <h5 class="modal-title">@Title</h5>
+                }
+                @if (!IsFixed)
+                {
+                    <button type="button" class="close" @onclick="HideModal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                }
+            </div>
+            <div class="modal-body">
+                @ChildContent
+            </div>
+            <div class="modal-footer">
+                @if (HasSubmitButton)
+                {
+                    <button type="button" class="btn btn-primary @(Validate() ? "" : "disabled")" @onclick="DoSubmit">@SubmitText</button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _windowId = Guid.NewGuid().ToString();
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool HasSubmitButton { get; set; } = true;
+
+    [Parameter]
+    public string SubmitText { get; set; } = "Submit";
+
+    [Parameter]
+    public Action OnSubmit { get; set; }
+
+    [Parameter]
+    public Action OnOpen { get; set; }
+
+    [Parameter]
+    public Action OnClose { get; set; }
+
+    [Parameter]
+    public Func<bool> Validate { get; set; } = () => true;
+
+    [Parameter]
+    public bool IsFixed { get; set; } = false;
+
+    public async Task Show(string title = "")
+    {
+        Title = string.IsNullOrEmpty(title) ? Title : title;
+        await ShowModal();
+    }
+
+    private async Task DoSubmit()
+    {
+        if (Validate())
+        {
+            OnSubmit?.Invoke();
+            await HideModal();
+        }
+    }
+
+    private async Task ShowModal()
+    {
+        if (IsFixed)
+        {
+            await JSRuntime.InvokeVoidAsync("showFixedModal", $"#{_windowId}");
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("showModal", $"#{_windowId}");
+        }
+
+        OnOpen?.Invoke();
+    }
+
+    private async Task HideModal()
+    {
+        await JSRuntime.InvokeVoidAsync("hideModal", $"#{_windowId}");
+        OnClose?.Invoke();
+    }
+}

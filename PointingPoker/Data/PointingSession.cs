@@ -36,17 +36,17 @@ namespace PointingPoker.Data
             _options = new ConcurrentDictionary<string, CountingItem<PointingOption>>();
 
             // Pre-poplate topics
-            AddTopic(new Topic("Default Story 1", "some discussion"));
-            AddTopic(new Topic("Default Story 2", "some discussion"));
-            AddTopic(new Topic("Default Story 3", "some discussion"));
-            AddTopic(new Topic("Default Story 4", "some discussion"));
-            AddTopic(new Topic("Default Story 5", "some discussion"));
-            AddTopic(new Topic("Default Story 6", "some discussion"));
-            AddTopic(new Topic("Default Story 7", "some discussion"));
-            AddTopic(new Topic("Default Story 8", "some discussion"));
-            AddTopic(new Topic("Default Story 9", "some discussion"));
-            AddTopic(new Topic("Default Story 10", "some discussion"));
-            AddTopic(new Topic("Default Story 11", "some discussion"));
+            AddTopic(new Topic("Default Story 1", "This is some discussion about the topic"));
+            AddTopic(new Topic("Default Story 2", "This is some discussion about the topic"));
+            AddTopic(new Topic("Default Story 3", "This is some discussion about the topic"));
+            AddTopic(new Topic("Default Story 4", "This is some discussion about the topic"));
+            AddTopic(new Topic("Default Story 5", "This is some discussion about the topic"));
+            AddTopic(new Topic("Default Story 6", "This is some discussion about the topic"));
+            AddTopic(new Topic("Default Story 7", "This is some discussion about the topic"));
+            AddTopic(new Topic("Default Story 8", "This is some discussion about the topic"));
+            AddTopic(new Topic("Default Story 9", "This is some discussion about the topic"));
+            AddTopic(new Topic("Default Story 10", "This is some discussion about the topic"));
+            AddTopic(new Topic("Default Story 11", "This is some discussion about the topic"));
 
             // Pre-populate options
             AddOption(new PointingOption("0 points", "0"));
@@ -104,7 +104,9 @@ namespace PointingPoker.Data
         {
             while (_topics.TryGetValue(topicId, out var item))
             {
-                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, false, VotingTopicState.Upcoming, null)), item))
+                var votingTopic = new VotingTopic(item.Item.Topic);
+                var newItem = new CountingItem<VotingTopic>(item.Count, votingTopic);
+                if (_topics.TryUpdate(topicId, newItem, item))
                 {
                     SafeRunAction(OnTopicsChanged);
                     SafeRunAction(OnVotesChanged);
@@ -117,7 +119,9 @@ namespace PointingPoker.Data
         {
             while (_topics.TryGetValue(topicId, out var item))
             {
-                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, isShowing, VotingTopicState.Voted, item.Item.Votes)), item))
+                var votingTopic = new VotingTopic(item.Item.Topic, isShowing, VotingTopicState.Voted, item.Item.Votes);
+                var newItem = new CountingItem<VotingTopic>(item.Count, votingTopic);
+                if (_topics.TryUpdate(topicId, newItem, item))
                 {
                     SafeRunAction(OnTopicsChanged);
                     SafeRunAction(OnVotesChanged);
@@ -154,16 +158,16 @@ namespace PointingPoker.Data
                 var voteRemoved = false;
                 foreach (var topic in Topics)
                 {
-                    while (_topics.TryGetValue(topic.Topic.Id, out var item))
+                    var result = UpdateTopicVotes(topic.Topic.Id, existingVotes =>
                     {
-                        var votes = item.Item.Votes.ToList();
+                        var votes = existingVotes.ToList();
                         votes.RemoveAll(v => v.UserId == userId);
+                        return votes;
+                    }, false);
 
-                        if (_topics.TryUpdate(topic.Topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, item.Item.IsShowing, item.Item.State, votes)), item))
-                        {
-                            voteRemoved = true;
-                            break;
-                        }
+                    if (result)
+                    {
+                        voteRemoved = true;
                     }
                 }
 
@@ -201,12 +205,12 @@ namespace PointingPoker.Data
                 throw new InvalidOperationException($"Only up to {MAX_TOPICS} topics are supported per session.");
             }
 
-            while (!_topics.TryAdd(topic.Id, new CountingItem<VotingTopic>(new VotingTopic(topic, false, VotingTopicState.Upcoming, null))))
+            var votingTopic = new VotingTopic(topic);
+            var item = new CountingItem<VotingTopic>(votingTopic);
+            if (_topics.TryAdd(topic.Id, item))
             {
-                topic = new Topic(topic.Name, topic.Discussion);
+                SafeRunAction(OnTopicsChanged);
             }
-
-            SafeRunAction(OnTopicsChanged);
         }
 
         public void UpdateTopic(Topic topic)
@@ -214,7 +218,9 @@ namespace PointingPoker.Data
             // Attempt to update until successful or if the option is removed/doesn't exist.
             while (_topics.TryGetValue(topic.Id, out var item) && item.Item.Topic.IsModified(topic))
             {
-                if (_topics.TryUpdate(topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(topic, item.Item.IsShowing, item.Item.State, item.Item.Votes)), item))
+                var votingTopic = new VotingTopic(item.Item, topic);
+                var newItem = new CountingItem<VotingTopic>(item.Count, votingTopic);
+                if (_topics.TryUpdate(topic.Id, newItem, item))
                 {
                     SafeRunAction(OnTopicsChanged);
                     return;
@@ -238,12 +244,10 @@ namespace PointingPoker.Data
                 throw new InvalidOperationException($"Only up to {MAX_OPTIONS} options are supported per session.");
             }
 
-            while (!_options.TryAdd(option.Id, new CountingItem<PointingOption>(option)))
+            if (_options.TryAdd(option.Id, new CountingItem<PointingOption>(option)))
             {
-                option = new PointingOption(option.Name, option.Value);
+                SafeRunAction(OnOptionsChanged);
             }
-
-            SafeRunAction(OnOptionsChanged);
         }
 
         public void UpdateOption(PointingOption option)

@@ -15,6 +15,21 @@ namespace PointingPoker.Data
             Votes = votes == null ? new Vote[0] : votes.ToArray();
         }
 
+        /// <summary>
+        /// Constructs a new voting topic from a topic with all defaults
+        /// </summary>
+        public VotingTopic(Topic topic)
+            : this(topic, false, VotingTopicState.Upcoming, null) { }
+
+        /// <summary>
+        /// Copies a voting topic with a different underlying topic.
+        /// </summary>
+        public VotingTopic(VotingTopic copy, Topic topic)
+            : this(topic, copy.IsShowing, copy.State, copy.Votes) { }
+
+        /// <summary>
+        /// Copies a voting topic with different votes.
+        /// </summary>
         public VotingTopic(VotingTopic copy, IEnumerable<Vote> votes)
             : this(copy.Topic, copy.IsShowing, copy.State, votes) { }
 

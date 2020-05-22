@@ -1,0 +1,44 @@
+﻿<div class="form-group">
+    <label for="edit-story-name">Name</label>
+    <input id="edit-story-name" class="form-control col-12" placeholder="Name" @bind="Name" @bind:event="oninput" />
+</div>
+<div class="form-group">
+    <label for="edit-description-name">Description</label>
+    <input id="edit-description-name" class="form-control col-12" placeholder="Description" @bind="Description" @bind:event="oninput" />
+</div>
+
+@code {
+    private string _name = string.Empty;
+    private string _description = string.Empty;
+
+    [Parameter]
+    public Action OnChange { get; set; }
+
+    [Parameter]
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            _name = value;
+            OnChange?.Invoke();
+        }
+    }
+
+    [Parameter]
+    public string Description
+    {
+        get => _description;
+        set
+        {
+            _description = value;
+            OnChange?.Invoke();
+        }
+    }
+
+    public void Clear()
+    {
+        _name = string.Empty;
+        _description = string.Empty;
+    }
+}
