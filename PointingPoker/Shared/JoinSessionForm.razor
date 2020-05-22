@@ -1,0 +1,56 @@
+﻿@using PointingPoker.Data;
+
+<div class="form-group">
+    <label for="join-username">Participant Name</label>
+    <input id="join-username" class="form-control col-12" placeholder="Participant Name" @bind="@Name" @bind:event="oninput"/>
+</div>
+<div class="form-group">
+    <label for="participant-type-toggles" style="width:100%">Role</label>
+    <div id="participant-type-toggles" class="btn-group btn-group-toggle">
+        <label class="btn btn-outline-primary @(Type.Equals(ParticipantType.Observer) ? "active" : "")">
+            <input type="radio" name="JoinRole" id="JoinAsObserver" @onclick="(e => Type = ParticipantType.Observer)">Observer
+        </label>
+        <label class="btn btn-outline-primary @(Type.Equals(ParticipantType.Voter) ? "active" : "")">
+            <input type="radio" name="JoinRole" id="JoinAsVoter" @onclick="(e => Type = ParticipantType.Voter)">Voter
+        </label>
+        <label class="btn btn-outline-primary @(Type.Equals(ParticipantType.Moderator) ? "active" : "")">
+            <input type="radio" name="JoinRole" id="JoinAsModerator" @onclick="(e => Type = ParticipantType.Moderator)">Moderator
+        </label>
+    </div>
+</div>
+
+@code {
+    private string _name = string.Empty;
+    private ParticipantType _type = ParticipantType.Voter;
+
+    [Parameter]
+    public Action OnChange { get; set; }
+
+    [Parameter]
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            _name = value;
+            OnChange?.Invoke();
+        }
+    }
+
+    [Parameter]
+    public ParticipantType Type
+    {
+        get => _type;
+        set
+        {
+            _type = value;
+            OnChange?.Invoke();
+        }
+    }
+
+    public void Clear()
+    {
+        _name = string.Empty;
+        _type = ParticipantType.Voter;
+    }
+}

@@ -1,0 +1,21 @@
+﻿@using PointingPoker.Data;
+
+<Modal @ref="_modal" Title="Join Session" Validate="@Validate" OnSubmit="@DoSubmit" OnClose="@Clear">
+    <JoinSessionForm @ref="_form" OnChange="StateHasChanged" />
+</Modal>
+
+@code {
+    private Modal _modal;
+    private JoinSessionForm _form;
+
+    [Parameter]
+    public Action<string, ParticipantType> OnJoin { get; set; }
+
+    public async Task Show() => await _modal.Show();
+
+    public bool Validate() => !string.IsNullOrEmpty(_form?.Name);
+
+    public void DoSubmit() => OnJoin?.Invoke(_form.Name, _form.Type);
+
+    public void Clear() => _form.Clear();
+}

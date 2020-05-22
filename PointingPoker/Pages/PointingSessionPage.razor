@@ -121,41 +121,7 @@ else
     <TopicModal @ref="_topicModal" Command="((name, description) => _session.AddTopic(new Topic(name, description)))"/>
 
     @* Join session modal *@
-    <div class="modal fade active show" id="JoinSessionWindow" tabindex="-1" role="dialog" aria-labelledby="JoinSessionWindow" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Join Session</h5>
-                    @*<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>*@
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="join-username">Participant Name</label>
-                        <input id="join-username" class="form-control col-12" placeholder="Participant Name" @bind="@_joinUsername" />
-                    </div>
-                    <div class="form-group">
-                        <label for="participant-type-toggles" style="width:100%">Role</label>
-                        <div id="participant-type-toggles" class="btn-group btn-group-toggle">
-                            <label class="btn btn-outline-primary @(_joinRoleSelection.Equals(ParticipantType.Observer) ? "active" : "")">
-                                <input type="radio" name="JoinRole" id="JoinAsObserver" @onclick="(e => _joinRoleSelection = ParticipantType.Observer)">Observer
-                            </label>
-                            <label class="btn btn-outline-primary @(_joinRoleSelection.Equals(ParticipantType.Voter) ? "active" : "")">
-                                <input type="radio" name="JoinRole" id="JoinAsVoter" @onclick="(e => _joinRoleSelection = ParticipantType.Voter)">Voter
-                            </label>
-                            <label class="btn btn-outline-primary @(_joinRoleSelection.Equals(ParticipantType.Moderator) ? "active" : "")">
-                                <input type="radio" name="JoinRole" id="JoinAsModerator" @onclick="(e => _joinRoleSelection = ParticipantType.Moderator)">Moderator
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary @(string.IsNullOrEmpty(_joinUsername) ? "disabled" : "")" @onclick="(e => Join(_joinUsername, _joinRoleSelection))" data-dismiss="@(!string.IsNullOrEmpty(_joinUsername) ? "modal" : "")">Join</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <JoinSessionModal @ref="_joinSessionModal" OnJoin="((name, type) => _session.AddParticipant(new Participant(_userId, name, type)))"/> 
 
     @* Configure session modal *@
     <div class="modal fade" id="ConfigureSessionWindow" tabindex="-1" role="dialog" aria-labelledby="ConfigureSessionWindow" aria-hidden="true">
@@ -210,9 +176,6 @@ else
 
 
 @code {
-    private string _joinUsername = string.Empty;
-    private ParticipantType _joinRoleSelection = ParticipantType.Observer;
-
     private bool _isLoading = true;
     private string _userId = string.Empty;
     private PointingSession _session = null;
@@ -220,6 +183,7 @@ else
     private ChartJsBarChart _barChart;
     private BarDataset<Int32Wrapper> _barDataSet;
     private TopicModal _topicModal;
+    private JoinSessionModal _joinSessionModal;
 
     [Parameter]
     public string SessionId { get; set; } = string.Empty;
@@ -305,12 +269,13 @@ else
             SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopicId);
 
             _isLoading = false;
-            StateHasChanged();
 
             if (Participant == null)
             {
-                await JSRuntime.InvokeAsync<string>("showJoinSession");
+                await _joinSessionModal.Show();
             }
+
+            StateHasChanged();
         }
     }
 
