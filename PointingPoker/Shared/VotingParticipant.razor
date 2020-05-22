@@ -1,0 +1,23 @@
+﻿@using PointingPoker.Data;
+
+<div class="voting-participant d-flex flex-row pl-3 pr-3 align-items-center">
+    <span class="oi oi-person voting-participant-icon @(Vote != null ? "voted" : "")" />
+    <div class="voting-participant-text-container d-flex flex-column flex-grow-1 align-items-start pl-2 pt-1 pb-1 pr-2">
+        <span class="voting-participant-text">@(string.IsNullOrEmpty(Participant.Name) ? "<No name>" : Participant.Name)</span>
+        <div class="voting-participant-status">@(VoteOption == null ? "Waiting..." : (IsShowingVote ? VoteOption.Name : "Voted!"))</div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Vote Vote { get; set; }
+
+    [Parameter]
+    public bool IsShowingVote { get; set; }
+
+    [Parameter]
+    public PointingOption VoteOption { get; set; }
+
+    [Parameter]
+    public Participant Participant { get; set; }
+}

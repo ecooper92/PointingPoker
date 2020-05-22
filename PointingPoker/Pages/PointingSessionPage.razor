@@ -1,120 +1,115 @@
 ﻿@page "/pointing/{sessionId}"
-@*@layout SessionLayout*@
 
 @implements IDisposable
-@using PointingPoker.Data
-@inject IJSRuntime JSRuntime;
+
 @inject UserManager UserManager
 @inject NavigationManager NavigationManager
 @inject PointingSessionManager PointingSessionManager
 
+@using PointingPoker.Data
+
 @if (_isLoading)
 {
-@*<h3 class="text-center m-auto">Loading...</h3>*@
+    @*<h3 class="text-center m-auto">Loading...</h3>*@
 }
 else if (_session == null)
 {
-<h3 class="text-center m-auto">Woops! Couldn't find your session :(</h3>
+    <h3 class="text-center m-auto">Woops! Couldn't find your session :(</h3>
 }
 else
 {
-<div class="w-100 h-100 p-3">
-    <div class="main-row d-flex h-100">
-        <div class="story-column flex-shrink-0">
-            <div class="card h-100">
-                <div class="d-flex flex-row justify-content-between align-items-center">
-                    <h5 class="ml-3 mt-2 mb-2">Stories</h5>
-                    <div class="d-flex flex-wrap flex-row pl-2">
-                        <button class="btn pointing-session-control oi oi-plus ml-2 mr-2" title="Add Story" @onclick="@(e => _topicModal.Show("Add Story"))"/>
+    <div class="w-100 h-100 p-3">
+        <div class="main-row d-flex h-100">
+            <div class="story-column flex-shrink-0">
+                <div class="card h-100">
+                    <div class="d-flex flex-row justify-content-between align-items-center">
+                        <h5 class="ml-3 mt-2 mb-2">Stories</h5>
+                        <div class="d-flex flex-wrap flex-row pl-2">
+                            <button class="btn pointing-session-control oi oi-plus ml-2 mr-2" title="Add Story" @onclick="@(e => _topicModal.Show("Add Story"))" />
+                        </div>
                     </div>
-                </div>
-                <div class="card-body p-0" style="min-height:0; overflow-y:auto; overflow-x:hidden">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th scope="col">Name</th>
-                                <th scope="col">Status</th>
-                                <th scope="col">Result</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var topic in _session.Topics)
-                            {
+                    <div class="card-body p-0" style="min-height:0; overflow-y:auto; overflow-x:hidden">
+                        <table class="table">
+                            <thead>
                                 <tr>
-                                    <td>@topic.Topic.Name</td>
-                                    <td>Upcoming</td>
-                                    <td>0.3</td>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Result</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var topic in _session.Topics)
+                                {
+                                    <tr>
+                                        <td>@topic.Topic.Name</td>
+                                        <td>Upcoming</td>
+                                        <td>0.3</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="voting-column flex-grow-1">
-            <div class="card h-100">
-                <div class="d-flex flex-row justify-content-between">
-                    <ul class="nav">
-                        <li class="nav-item"><a class="nav-link active h-100" data-toggle="tab" href="#voting-view">Voting</a></li>
-                        <li class="nav-item"><a class="nav-link h-100" data-toggle="tab" href="#results-view">Results</a></li>
-                    </ul>
+            <div class="voting-column flex-grow-1">
+                <div class="card h-100">
+                    <div class="d-flex flex-row justify-content-between">
+                        <ul class="nav">
+                            <li class="nav-item"><a class="nav-link active h-100" data-toggle="tab" href="#voting-view">Voting</a></li>
+                            <li class="nav-item"><a class="nav-link h-100" data-toggle="tab" href="#results-view">Results</a></li>
+                        </ul>
 
-                    <div class="pointing-session-control-container d-flex flex-wrap flex-row pl-2">
-                        <button @onclick="(e => _session.SetVotesShowing(SelectedTopicId, !_session.IsShowingTopic(SelectedTopicId)))" class="btn pointing-session-control oi oi-eye ml-2 mr-2 @(_session.IsShowingTopic(SelectedTopicId) ? "highlight" : "")" title="@(_session.IsShowingTopic(SelectedTopicId) ? "Hide Votes" : "Show Votes")" />
-                        <button @onclick="(e => _session.ResetVotes(SelectedTopicId))" class="btn pointing-session-control oi oi-reload ml-2 mr-2" title="Reset Votes" />
-                        <button class="btn pointing-session-control oi oi-cog ml-2 mr-2" @onclick=@(e => _configureSessionModal.Show()) title="Configure Session" />
+                        <div class="pointing-session-control-container d-flex flex-wrap flex-row pl-2">
+                            <button @onclick="(e => _session.SetVotesShowing(SelectedTopicId, !_session.IsShowingTopic(SelectedTopicId)))" class="btn pointing-session-control oi oi-eye ml-2 mr-2 @(_session.IsShowingTopic(SelectedTopicId) ? "highlight" : "")" title="@(_session.IsShowingTopic(SelectedTopicId) ? "Hide Votes" : "Show Votes")" />
+                            <button @onclick="(e => _session.ResetVotes(SelectedTopicId))" class="btn pointing-session-control oi oi-reload ml-2 mr-2" title="Reset Votes" />
+                            <button class="btn pointing-session-control oi oi-cog ml-2 mr-2" @onclick=@(e => _configureSessionModal.Show()) title="Configure Session" />
+                        </div>
                     </div>
-                </div>
-                <div class="card-body p-0 border-top" style="min-height:0">
-                    <div class="tab-content h-100">
-                        <div id="voting-view" class="tab-pane active">
-                            <div class="d-flex flex-column w-100 h-100">
-                                <div class="d-flex flex-row w-100 flex-grow-1" style="min-height:0">
-                                    <div id="participant-column" class="d-flex flex-column flex-shrink-0 h-100 border-right" style="overflow-y:auto; overflow-x:hidden">
-                                        <h6 class="m-2">Participants</h6>
-                                        @foreach (var participant in _session.Participants)
-                                        {
-                                            var userVote = _session.GetVoteByUserAndTopic(participant.UserId, SelectedTopicId);
-                                            var voteOption = _session.Options.FirstOrDefault(o => o.Id == userVote?.OptionId);
-                                            <div class="voting-participant d-flex flex-row pl-3 pr-3 align-items-center">
-                                                <span class="oi oi-person voting-participant-icon @(userVote != null ? "voted" : "")" />
-                                                <div class="voting-participant-text-container d-flex flex-column flex-grow-1 align-items-start pl-2 pt-1 pb-1 pr-2">
-                                                    <span class="voting-participant-text">@(string.IsNullOrEmpty(participant.Name) ? "<No name>" : participant.Name)</span>
-                                                    <div class="voting-participant-status">@(voteOption == null ? "Waiting..." : (!_session.IsShowingTopic(SelectedTopicId) ? "Voted!" : voteOption.Name))</div>
+                    <div class="card-body p-0 border-top" style="min-height:0">
+                        <div class="tab-content h-100">
+                            <div id="voting-view" class="tab-pane active">
+                                <div class="d-flex flex-column w-100 h-100">
+                                    <div class="d-flex flex-row w-100 flex-grow-1" style="min-height:0">
+                                        <div id="participant-column" class="d-flex flex-column flex-shrink-0 h-100 border-right" style="overflow-y:auto; overflow-x:hidden">
+                                            <h6 class="m-2">Participants</h6>
+                                            @foreach (var participant in _session.Participants)
+                                            {
+                                                var isShowing = _session.IsShowingTopic(SelectedTopicId);
+                                                var vote = _session.GetVoteByUserAndTopic(participant.UserId, SelectedTopicId);
+                                                var voteOption = _session.Options.FirstOrDefault(o => o.Id == vote?.OptionId);
+                                                <VotingParticipant Participant=@participant Vote=@vote VoteOption=@voteOption IsShowingVote=@isShowing />
+                                            }
+                                        </div>
+                                        <div class="d-flex flex-row mt-2 mb-2 justify-content-around flex-wrap w-100" style="overflow-y:auto; overflow-x:hidden">
+                                            @foreach (var option in _session.Options)
+                                            {
+                                                <div class="voting-button-wrapper p-2">
+                                                    <button class="voting-button w-100 h-100 btn @(SelectedVote != null && SelectedVote.OptionId == option.Id ? "btn-outline-success":"btn-outline-info") p-2 m-1" @onclick="(e => Vote(option.Id))">@option.Name</button>
                                                 </div>
-                                            </div>
-                                        }
-                                    </div>
-                                    <div class="d-flex flex-row mt-2 mb-2 justify-content-around flex-wrap w-100" style="overflow-y:auto; overflow-x:hidden">
-                                        @foreach (var option in _session.Options)
-                                        {
-                                            <div class="voting-button-wrapper p-2">
-                                                <button class="voting-button w-100 h-100 btn @(SelectedVote != null && SelectedVote.OptionId == option.Id ? "btn-outline-success":"btn-outline-info") p-2 m-1" @onclick="(e => Vote(option.Id))">@option.Name</button>
-                                            </div>
-                                        }
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div id="results-view" class="tab-pane">
-                            <VoteBarChart @ref="_voteBarChart" IsShowing="@(_session.FindTopic(SelectedTopicId)?.IsShowing ?? false)" Options="_session.Options" Votes="@(_session.FindTopic(SelectedTopicId)?.Votes ?? new Vote[0])"/>
+                            <div id="results-view" class="tab-pane">
+                                <VoteBarChart @ref="_voteBarChart" IsShowing="@(_session.FindTopic(SelectedTopicId)?.IsShowing ?? false)" Options="_session.Options" Votes="@(_session.FindTopic(SelectedTopicId)?.Votes ?? new Vote[0])" />
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        @* Modals *@
+        @* Story modal *@
+        <TopicModal @ref="_topicModal" Command="((name, description) => _session.AddTopic(new Topic(name, description)))" />
+
+        @* Join session modal *@
+        <JoinSessionModal @ref="_joinSessionModal" OnJoin="Join" />
+
+        @* Configure session modal *@
+        <ConfigureSessionModal @ref="_configureSessionModal" Options=@_session.Options OnOptionAdded="(o => _session.AddOption(o))" OnOptionUpdated="(o => _session.UpdateOption(o))" OnOptionRemoved="(id => _session.RemoveOption(id))" />
     </div>
-
-    @* Modals *@
-    @* Story modal *@
-    <TopicModal @ref="_topicModal" Command="((name, description) => _session.AddTopic(new Topic(name, description)))"/>
-
-    @* Join session modal *@
-    <JoinSessionModal @ref="_joinSessionModal" OnJoin="Join"/> 
-
-    @* Configure session modal *@
-    <ConfigureSessionModal @ref="_configureSessionModal" Options=@_session.Options OnOptionAdded="(o => _session.AddOption(o))" OnOptionUpdated="(o => _session.UpdateOption(o))" OnOptionRemoved="(id => _session.RemoveOption(id))"/>
-</div>
 }
 
 
