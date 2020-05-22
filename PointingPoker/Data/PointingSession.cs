@@ -37,6 +37,16 @@ namespace PointingPoker.Data
 
             // Pre-poplate topics
             AddTopic(new Topic("Default Story 1", "some discussion"));
+            AddTopic(new Topic("Default Story 2", "some discussion"));
+            AddTopic(new Topic("Default Story 3", "some discussion"));
+            AddTopic(new Topic("Default Story 4", "some discussion"));
+            AddTopic(new Topic("Default Story 5", "some discussion"));
+            AddTopic(new Topic("Default Story 6", "some discussion"));
+            AddTopic(new Topic("Default Story 7", "some discussion"));
+            AddTopic(new Topic("Default Story 8", "some discussion"));
+            AddTopic(new Topic("Default Story 9", "some discussion"));
+            AddTopic(new Topic("Default Story 10", "some discussion"));
+            AddTopic(new Topic("Default Story 11", "some discussion"));
 
             // Pre-populate options
             AddOption(new PointingOption("0 points", "0"));
@@ -79,19 +89,13 @@ namespace PointingPoker.Data
             }
 
             var vote = new Vote(userId, topicId, optionId);
-
-            while (_topics.TryGetValue(topicId, out var item))
+            UpdateTopicVotes(topicId, existingVotes =>
             {
-                var votes = item.Item.Votes.ToList();
+                var votes = existingVotes.ToList();
                 votes.RemoveAll(v => v.UserId == userId && v.TopicId == topicId);
                 votes.Add(vote);
-
-                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, item.Item.IsShowing, votes)), item))
-                {
-                    SafeRunAction(OnVotesChanged);
-                    return true;
-                }
-            }
+                return votes;
+            });
 
             return false;
         }
@@ -100,7 +104,7 @@ namespace PointingPoker.Data
         {
             while (_topics.TryGetValue(topicId, out var item))
             {
-                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, false, null)), item))
+                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, false, VotingTopicState.Upcoming, null)), item))
                 {
                     SafeRunAction(OnTopicsChanged);
                     SafeRunAction(OnVotesChanged);
@@ -113,7 +117,7 @@ namespace PointingPoker.Data
         {
             while (_topics.TryGetValue(topicId, out var item))
             {
-                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, isShowing, item.Item.Votes)), item))
+                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, isShowing, VotingTopicState.Voted, item.Item.Votes)), item))
                 {
                     SafeRunAction(OnTopicsChanged);
                     SafeRunAction(OnVotesChanged);
@@ -155,7 +159,7 @@ namespace PointingPoker.Data
                         var votes = item.Item.Votes.ToList();
                         votes.RemoveAll(v => v.UserId == userId);
 
-                        if (_topics.TryUpdate(topic.Topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, item.Item.IsShowing, votes)), item))
+                        if (_topics.TryUpdate(topic.Topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, item.Item.IsShowing, item.Item.State, votes)), item))
                         {
                             voteRemoved = true;
                             break;
@@ -197,7 +201,7 @@ namespace PointingPoker.Data
                 throw new InvalidOperationException($"Only up to {MAX_TOPICS} topics are supported per session.");
             }
 
-            while (!_topics.TryAdd(topic.Id, new CountingItem<VotingTopic>(new VotingTopic(topic, false, null))))
+            while (!_topics.TryAdd(topic.Id, new CountingItem<VotingTopic>(new VotingTopic(topic, false, VotingTopicState.Upcoming, null))))
             {
                 topic = new Topic(topic.Name, topic.Discussion);
             }
@@ -210,7 +214,7 @@ namespace PointingPoker.Data
             // Attempt to update until successful or if the option is removed/doesn't exist.
             while (_topics.TryGetValue(topic.Id, out var item) && item.Item.Topic.IsModified(topic))
             {
-                if (_topics.TryUpdate(topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(topic, item.Item.IsShowing, item.Item.Votes)), item))
+                if (_topics.TryUpdate(topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(topic, item.Item.IsShowing, item.Item.State, item.Item.Votes)), item))
                 {
                     SafeRunAction(OnTopicsChanged);
                     return;
@@ -263,26 +267,46 @@ namespace PointingPoker.Data
                 var voteRemoved = false;
                 foreach (var topic in Topics)
                 {
-                    while (_topics.TryGetValue(topic.Topic.Id, out var item))
+                    var result = UpdateTopicVotes(topic.Topic.Id, existingVotes =>
                     {
-                        var votes = item.Item.Votes.ToList();
+                        var votes = existingVotes.ToList();
                         votes.RemoveAll(v => v.OptionId == optionId);
+                        return votes;
+                    }, false);
 
-                        if (_topics.TryUpdate(topic.Topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, item.Item.IsShowing, votes)), item))
-                        {
-                            voteRemoved = true;
-                            break;
-                        }
+                    if (result)
+                    {
+                        voteRemoved = true;
                     }
                 }
 
                 if (voteRemoved)
                 {
-                    SafeRunAction(OnTopicsChanged);
                     SafeRunAction(OnVotesChanged);
+                    SafeRunAction(OnTopicsChanged);
                 }
                 SafeRunAction(OnOptionsChanged);
             }
+        }
+
+        private bool UpdateTopicVotes(string topicId, Func<IEnumerable<Vote>, IEnumerable<Vote>> updateAction, bool fireUpdate = true)
+        {
+            while (_topics.TryGetValue(topicId, out var item))
+            {
+                var currentVotingTopic = item.Item;
+                var updatedVotes = updateAction(item.Item.Votes);
+                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(currentVotingTopic, updatedVotes)), item))
+                {
+                    if (fireUpdate)
+                    {
+                        SafeRunAction(OnVotesChanged);
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void SafeRunAction(Action action)

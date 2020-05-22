@@ -31,25 +31,33 @@ else
     <div class="main-row d-flex h-100">
         <div class="story-column flex-shrink-0">
             <div class="card h-100">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Name</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Result</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var topic in _session.Topics)
-                                {
-                        <tr>
-                            <td>@topic.Topic.Name</td>
-                            <td>Upcoming</td>
-                            <td>0.3</td>
-                        </tr>
-                                }
-                    </tbody>
-                </table>
+                <h5 class="float-left">Stories</h5>
+                <div class="pointing-session-control-container d-flex flex-wrap flex-row pl-2 float-right">
+                    <button @onclick="AddTopic" class="btn pointing-session-control oi oi-plus m-2" title="Add Story" />
+                    @*<button class="btn pointing-session-control oi oi-reload m-2" title="Reset Votes" />
+                    <button class="btn pointing-session-control oi oi-cog m-2" data-toggle="modal" data-target="#ConfigureSessionWindow" title="Configure Session" />*@
+                </div>
+                <div class="card-body p-0" style="min-height:0; overflow-y:auto; overflow-x:hidden">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var topic in _session.Topics)
+                            {
+                                <tr>
+                                    <td>@topic.Topic.Name</td>
+                                    <td>Upcoming</td>
+                                    <td>0.3</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         <div class="voting-column flex-grow-1">
@@ -111,14 +119,80 @@ else
                 <div class="modal-header">
                     <h5 class="modal-title">Join Session</h5>
                     @*<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>*@
+                            <span aria-hidden="true">&times;</span>
+                        </button>*@
                 </div>
                 <div class="modal-body">
-                    <input class="form-control col-12" placeholder="Participant Name" @bind="@Username" />
+                    <div class="form-group">
+                        <label for="join-username">Participant Name</label>
+                        <input id="join-username" class="form-control col-12" placeholder="Participant Name" @bind="@_joinUsername" />
+                    </div>
+                    <div class="form-group">
+                        <label for="participant-type-toggles" style="width:100%">Role</label>
+                        <div id="participant-type-toggles" class="btn-group btn-group-toggle">
+                            <label class="btn btn-outline-primary @(_joinRoleSelection.Equals(ParticipantType.Observer) ? "active" : "")">
+                                <input type="radio" name="JoinRole" id="JoinAsObserver" @onclick="(e => _joinRoleSelection = ParticipantType.Observer)">Observer
+                            </label>
+                            <label class="btn btn-outline-primary @(_joinRoleSelection.Equals(ParticipantType.Voter) ? "active" : "")">
+                                <input type="radio" name="JoinRole" id="JoinAsVoter" @onclick="(e => _joinRoleSelection = ParticipantType.Voter)">Voter
+                            </label>
+                            <label class="btn btn-outline-primary @(_joinRoleSelection.Equals(ParticipantType.Moderator) ? "active" : "")">
+                                <input type="radio" name="JoinRole" id="JoinAsModerator" @onclick="(e => _joinRoleSelection = ParticipantType.Moderator)">Moderator
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary @(string.IsNullOrEmpty(Username) ? "disabled" : "")" @onclick="Join" data-dismiss="@(!string.IsNullOrEmpty(Username) ? "modal" : "")">Join</button>
+                    <button type="button" class="btn btn-primary @(string.IsNullOrEmpty(_joinUsername) ? "disabled" : "")" @onclick="(e => Join(_joinUsername, _joinRoleSelection))" data-dismiss="@(!string.IsNullOrEmpty(_joinUsername) ? "modal" : "")">Join</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Configure session modal *@
+    <div class="modal fade" id="ConfigureSessionWindow" tabindex="-1" role="dialog" aria-labelledby="ConfigureSessionWindow" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Configure Session</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <h4 class="card-title text-center col-8 offset-2 mt-1">Pointing Options</h4>
+                        <div class="col-2 mb-1">
+                            <button class="btn btn-primary float-right" @onclick="AddPointingOption">Add</button>
+                        </div>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var option in _session.Options)
+                            {
+                                <tr>
+                                    <td>
+                                        <input class="form-control" type="text" value="@option.Name" @onchange="(e => UpdatePointingOption(option.Id, e.Value.ToString(), option.Value))" />
+                                    </td>
+                                    <td>
+                                        <input class="form-control" type="text" value="@option.Value" @onchange="(e => UpdatePointingOption(option.Id, option.Name, e.Value.ToString()))" />
+                                    </td>
+                                    <td>
+                                        <a class="oi oi-trash" style="cursor: pointer;" @onclick="(() => _session.RemoveOption(option.Id))"></a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -264,6 +338,8 @@ else
 
 
 @code {
+    private string _joinUsername = string.Empty;
+    private ParticipantType _joinRoleSelection = ParticipantType.Observer;
     private bool _isLoading = true;
     private string _userId = string.Empty;
     private PointingSession _session = null;
@@ -273,8 +349,6 @@ else
 
     [Parameter]
     public string SessionId { get; set; } = string.Empty;
-
-    public string Username { get; set; } = string.Empty;
 
     public Participant Participant { get; set; }
 
@@ -410,11 +484,11 @@ else
         _session.AddTopic(new Topic("New", ""));
     }
 
-    private void Join()
+    private void Join(string username, ParticipantType type)
     {
-        if (!string.IsNullOrEmpty(Username))
+        if (!string.IsNullOrEmpty(username))
         {
-            var participant = new Participant(_userId, Username, ParticipantType.Voter);
+            var participant = new Participant(_userId, username, type);
             _session.AddParticipant(participant);
 
             Participant = participant;
