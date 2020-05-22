@@ -1,0 +1,97 @@
+﻿@using ChartJs.Blazor;
+@using ChartJs.Blazor.ChartJS.BarChart
+@using ChartJs.Blazor.ChartJS.Common.Axes
+@using ChartJs.Blazor.ChartJS.Common.Axes.Ticks
+@using ChartJs.Blazor.ChartJS.Common.Enums
+@using ChartJs.Blazor.ChartJS.Common.Properties
+@using ChartJs.Blazor.ChartJS.Common.Wrappers
+@using ChartJs.Blazor.Charts
+@using ChartJs.Blazor.Util
+@using PointingPoker.Data;
+
+<ChartJsBarChart @ref="_barChart" Config="@_barChartConfig"></ChartJsBarChart>
+
+@code {
+    private bool _isShowing;
+    private IEnumerable<Vote> _votes;
+
+    private BarConfig _barChartConfig;
+    private ChartJsBarChart _barChart;
+    private BarDataset<Int32Wrapper> _barDataSet;
+
+    [Parameter]
+    public bool IsShowing
+    {
+        get => _isShowing;
+        set
+        {
+            _isShowing = value;
+            RefreshDataAsync();
+        }
+    }
+
+    [Parameter]
+    public IEnumerable<Vote> Votes
+    {
+        get => _votes;
+        set
+        {
+            _votes = value;
+            RefreshDataAsync();
+        }
+    }
+
+    [Parameter]
+    public IEnumerable<PointingOption> Options { get; set; }
+
+    public async Task RefreshOptionsAsync()
+    {
+        _barChartConfig.Data.Labels.Clear();
+        _barChartConfig.Data.Labels.AddRange(Options.Select(o => o.Name));
+
+        await (_barChart?.Update() ?? Task.CompletedTask);
+    }
+
+    public async Task RefreshDataAsync()
+    {
+        _barDataSet?.RemoveAll(e => true);
+        if (_isShowing)
+        {
+            _barDataSet?.AddRange(Options.Select(o => Votes.Where(v => v.OptionId == o.Id).Count()).Wrap());
+        }
+
+        await (_barChart?.Update() ?? Task.CompletedTask);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _barChartConfig = new BarConfig(ChartType.Bar)
+        {
+            Options = new BarOptions
+            {
+                //Title = new ChartJs.Blazor.ChartJS.Common.Properties.OptionsTitle { Display = true, Text = "Results" },
+                Responsive = true,
+                MaintainAspectRatio = false,
+                Scales = new BarScales
+                {
+                    YAxes = new List<ChartJs.Blazor.ChartJS.Common.Axes.CartesianAxis>
+                    {
+                        new ChartJs.Blazor.ChartJS.Common.Axes.LinearCartesianAxis
+                        {
+                            Ticks = new ChartJs.Blazor.ChartJS.Common.Axes.Ticks.LinearCartesianTicks { AutoSkip = false, Min = 0 }
+                        }
+                    }
+                }
+            }
+        };
+
+        await RefreshOptionsAsync();
+        _barDataSet = new BarDataset<Int32Wrapper>(ChartType.Bar);
+        _barDataSet.Label = "Results";
+        _barDataSet.BorderWidth = 1;
+        _barDataSet.BackgroundColor = Options.Select(o => ColorUtil.RandomColorString()).ToArray();
+        _barChartConfig.Data.Datasets.Add(_barDataSet);
+
+        await RefreshDataAsync();
+    }
+}
