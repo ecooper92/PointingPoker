@@ -23,12 +23,17 @@
                 {
                     <button type="button" class="btn btn-primary @(Validate() ? "" : "disabled")" @onclick="DoSubmit">@SubmitText</button>
                 }
+                @if (HasCloseButton)
+                {
+                    <button type="button" class="btn btn-secondary" @onclick="HideModal">@CloseText</button>
+                }
             </div>
         </div>
     </div>
 </div>
 
 @code {
+    private bool _isOpen = false;
     private string _windowId = Guid.NewGuid().ToString();
 
     [Parameter]
@@ -45,6 +50,12 @@
 
     [Parameter]
     public Action OnSubmit { get; set; }
+
+    [Parameter]
+    public bool HasCloseButton { get; set; } = true;
+
+    [Parameter]
+    public string CloseText { get; set; } = "Close";
 
     [Parameter]
     public Action OnOpen { get; set; }
@@ -84,12 +95,15 @@
             await JSRuntime.InvokeVoidAsync("showModal", $"#{_windowId}");
         }
 
+        _isOpen = true;
         OnOpen?.Invoke();
     }
 
     private async Task HideModal()
     {
         await JSRuntime.InvokeVoidAsync("hideModal", $"#{_windowId}");
+
+        _isOpen = false;
         OnClose?.Invoke();
     }
 }

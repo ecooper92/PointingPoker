@@ -19,7 +19,7 @@
 
 @if (_isLoading)
 {
-<h3 class="text-center m-auto">Loading...</h3>
+@*<h3 class="text-center m-auto">Loading...</h3>*@
 }
 else if (_session == null)
 {
@@ -35,8 +35,6 @@ else
                     <h5 class="ml-3 mt-2 mb-2">Stories</h5>
                     <div class="d-flex flex-wrap flex-row pl-2">
                         <button class="btn pointing-session-control oi oi-plus ml-2 mr-2" title="Add Story" @onclick="@(e => _topicModal.Show("Add Story"))"/>
-                        @*<button class="btn pointing-session-control oi oi-reload m-2" title="Reset Votes" />
-                            <button class="btn pointing-session-control oi oi-cog m-2" data-toggle="modal" data-target="#ConfigureSessionWindow" title="Configure Session" />*@
                     </div>
                 </div>
                 <div class="card-body p-0" style="min-height:0; overflow-y:auto; overflow-x:hidden">
@@ -73,7 +71,7 @@ else
                     <div class="pointing-session-control-container d-flex flex-wrap flex-row pl-2">
                         <button @onclick="(e => _session.SetVotesShowing(SelectedTopicId, !_session.IsShowingTopic(SelectedTopicId)))" class="btn pointing-session-control oi oi-eye ml-2 mr-2 @(_session.IsShowingTopic(SelectedTopicId) ? "highlight" : "")" title="@(_session.IsShowingTopic(SelectedTopicId) ? "Hide Votes" : "Show Votes")" />
                         <button @onclick="(e => _session.ResetVotes(SelectedTopicId))" class="btn pointing-session-control oi oi-reload ml-2 mr-2" title="Reset Votes" />
-                        <button class="btn pointing-session-control oi oi-cog ml-2 mr-2" data-toggle="modal" data-target="#ConfigureSessionWindow" title="Configure Session" />
+                        <button class="btn pointing-session-control oi oi-cog ml-2 mr-2" @onclick=@(e => _configureSessionModal.Show()) title="Configure Session" />
                     </div>
                 </div>
                 <div class="card-body p-0 border-top" style="min-height:0">
@@ -121,56 +119,10 @@ else
     <TopicModal @ref="_topicModal" Command="((name, description) => _session.AddTopic(new Topic(name, description)))"/>
 
     @* Join session modal *@
-    <JoinSessionModal @ref="_joinSessionModal" OnJoin="((name, type) => _session.AddParticipant(new Participant(_userId, name, type)))"/> 
+    <JoinSessionModal @ref="_joinSessionModal" OnJoin="Join"/> 
 
     @* Configure session modal *@
-    <div class="modal fade" id="ConfigureSessionWindow" tabindex="-1" role="dialog" aria-labelledby="ConfigureSessionWindow" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Configure Session</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <h4 class="card-title text-center col-8 offset-2 mt-1">Pointing Options</h4>
-                        <div class="col-2 mb-1">
-                            <button class="btn btn-primary float-right" @onclick="AddPointingOption">Add</button>
-                        </div>
-                    </div>
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Value</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var option in _session.Options)
-                            {
-                                <tr>
-                                    <td>
-                                        <input class="form-control" type="text" value="@option.Name" @onchange="(e => UpdatePointingOption(option.Id, e.Value.ToString(), option.Value))" />
-                                    </td>
-                                    <td>
-                                        <input class="form-control" type="text" value="@option.Value" @onchange="(e => UpdatePointingOption(option.Id, option.Name, e.Value.ToString()))" />
-                                    </td>
-                                    <td>
-                                        <a class="oi oi-trash" style="cursor: pointer;" @onclick="(() => _session.RemoveOption(option.Id))"></a>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <ConfigureSessionModal @ref="_configureSessionModal" Options=@_session.Options OnOptionAdded="(o => _session.AddOption(o))" OnOptionUpdated="(o => _session.UpdateOption(o))" OnOptionRemoved="(id => _session.RemoveOption(id))"/>
 </div>
 }
 
@@ -184,6 +136,7 @@ else
     private BarDataset<Int32Wrapper> _barDataSet;
     private TopicModal _topicModal;
     private JoinSessionModal _joinSessionModal;
+    private ConfigureSessionModal _configureSessionModal;
 
     [Parameter]
     public string SessionId { get; set; } = string.Empty;
@@ -196,6 +149,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        _userId = await UserManager.GetUserIdAsync();
         _session = PointingSessionManager.Get(SessionId);
         if (_session != null)
         {
@@ -204,7 +158,8 @@ else
             _session.OnOptionsChanged += OnOptionsChanged;
             _session.OnParticipantsChanged += OnParticipantsChanged;
             SelectedTopicId = _session.Topics.Select(t => t.Topic.Id).FirstOrDefault();
-
+            Participant = _session.FindParticipant(_userId);
+            SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopicId);
 
             _barChartConfig = new BarConfig(ChartType.Bar)
             {
@@ -234,15 +189,16 @@ else
             _barChartConfig.Data.Datasets.Add(_barDataSet);
             await UpdateResultChart();
         }
-        else
-        {
-            _isLoading = false;
-        }
+
+        _isLoading = false;
     }
 
-    private void ConfigureSession()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        NavigationManager.NavigateTo($"/configure/{_session.Id}");
+        if (firstRender && Participant == null && _joinSessionModal != null)
+        {
+            await _joinSessionModal.Show();
+        }
     }
 
     private async Task UpdateResultChart()
@@ -260,25 +216,6 @@ else
         }
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && _session != null)
-        {
-            _userId = await UserManager.GetUserIdAsync();
-            Participant = _session.FindParticipant(_userId);
-            SelectedVote = _session.GetVoteByUserAndTopic(_userId, SelectedTopicId);
-
-            _isLoading = false;
-
-            if (Participant == null)
-            {
-                await _joinSessionModal.Show();
-            }
-
-            StateHasChanged();
-        }
-    }
-
     public void Dispose()
     {
         if (_session != null)
@@ -287,22 +224,7 @@ else
             _session.OnTopicsChanged -= OnTopicsChanged;
             _session.OnOptionsChanged -= OnOptionsChanged;
             _session.OnParticipantsChanged -= OnParticipantsChanged;
-
-            /*if (Participant != null)
-            {
-                _session.RemoveParticipant(_userId);
-            }*/
         }
-    }
-
-    private void AddPointingOption()
-    {
-        _session.AddOption(new PointingOption("?", "?"));
-    }
-
-    private void UpdatePointingOption(string id, string name, string value)
-    {
-        _session.UpdateOption(new PointingOption(id, name, value));
     }
 
     private void ChangeSelectedTopic(string topicId)

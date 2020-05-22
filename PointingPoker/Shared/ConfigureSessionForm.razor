@@ -1,0 +1,46 @@
+﻿@using PointingPoker.Data;
+
+<div class="row">
+    <h4 class="card-title text-center col-8 offset-2 mt-1">Pointing Options</h4>
+    <div class="col-2 mb-1">
+        <button class="btn btn-primary float-right" @onclick="@(e => OnOptionAdded?.Invoke(new PointingOption("?", "?")))">Add</button>
+    </div>
+</div>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var option in Options)
+        {
+            <tr>
+                <td>
+                    <input class="form-control" type="text" value="@option.Name" @onchange="(e => OnOptionUpdated(new PointingOption(option.Id, e.Value.ToString(), option.Value)))" />
+                </td>
+                <td>
+                    <input class="form-control" type="text" value="@option.Value" @onchange="(e => OnOptionUpdated(new PointingOption(option.Id, option.Name, e.Value.ToString())))" />
+                </td>
+                <td>
+                    <a class="oi oi-trash" style="cursor: pointer;" @onclick="(e => OnOptionRemoved?.Invoke(option.Id))"></a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter]
+    public IEnumerable<PointingOption> Options { get; set; }
+
+    [Parameter]
+    public Action<PointingOption> OnOptionAdded { get; set; }
+
+    [Parameter]
+    public Action<PointingOption> OnOptionUpdated { get; set; }
+
+    [Parameter]
+    public Action<string> OnOptionRemoved { get; set; }
+}

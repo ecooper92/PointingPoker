@@ -1,0 +1,23 @@
+﻿@using PointingPoker.Data;
+
+<Modal @ref=_modal Title="Configure Session" HasSubmitButton="false" HasCloseButton="true">
+    <ConfigureSessionForm Options=@Options OnOptionAdded=@OnOptionAdded OnOptionUpdated=@OnOptionUpdated OnOptionRemoved=@OnOptionRemoved />
+</Modal>
+
+@code {
+    private Modal _modal;
+
+    [Parameter]
+    public IEnumerable<PointingOption> Options { get; set; }
+
+    [Parameter]
+    public Action<PointingOption> OnOptionAdded { get; set; }
+
+    [Parameter]
+    public Action<PointingOption> OnOptionUpdated { get; set; }
+
+    [Parameter]
+    public Action<string> OnOptionRemoved { get; set; }
+
+    public async Task Show() => await _modal.Show();
+}
