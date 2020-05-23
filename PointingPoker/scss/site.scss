@@ -1,0 +1,272 @@
+﻿html, body {
+    font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+    height: 100%;
+    background-color: #F9F9F9;
+}
+
+app {
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.top-row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3.5rem;
+    background-color: #FFFFFF;
+}
+
+.logo {
+    max-width: 1.25rem;
+}
+
+.top-row .logo-text {
+    font-size: 14pt;
+    color: #000000;
+}
+
+.main-body {
+    position: absolute;
+    top: 3.5rem;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.main {
+    flex: 1;
+}
+
+/* Bootstrap overrides */
+
+a, .btn-link {
+    color: #0366d6;
+}
+
+.btn-primary {
+    color: #fff;
+    background-color: #457B9D;
+    border-color: #1861ac;
+}
+
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid #26b050;
+}
+
+.invalid {
+    outline: 1px solid red;
+}
+
+.validation-message {
+    color: red;
+}
+
+#blazor-error-ui {
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+.pointing-session-top {
+    overflow-y: hidden;
+    overflow-x: hidden;
+}
+
+.pointing-session-bottom {
+}
+
+.pointing-session-left {
+    background-color: white;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.pointing-session-right {
+    border-top: 1px solid #ECECEC;
+    border-left: 1px solid #ECECEC;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.pointing-session-control {
+    font-size: 16pt;
+    transition: color 0.5s;
+}
+
+.pointing-session-control.highlight {
+    color: limegreen;
+}
+
+.pointing-session-topic-container {
+    border-bottom: 1px solid #ECECEC;
+}
+
+.pointing-session-topic-topic-text {
+    border-width: 1px;
+    border-style: solid;
+    border-color: #D4D4D4;
+    background-color: #ECECEC;
+    border-radius: 1rem;
+    font-size: 10pt;
+    cursor: pointer;
+    max-width: 8rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow-x: hidden;
+    transition: color linear 0.2s;
+    transition: background-color linear 0.2s;
+    transition: border-color linear 0.2s;
+}
+
+.pointing-session-topic-topic-text:hover {
+    background-color: #E0E0E0;
+    border-color: #C9C9C9;
+}
+
+.pointing-session-topic-topic-text:active {
+    background-color: #B8B8B8;
+    border-color: #C9C9C9;
+}
+
+.pointing-session-topic-topic-text.selected {
+    color: white;
+    background-color: #606060;
+    border-color: #565656;
+}
+
+.pointing-session-topic-topic-text.selected:hover {
+    background-color: #909090;
+    border-color: #818181;
+}
+
+.pointing-session-topic-topic-text.selected:hover {
+    background-color: #808080;
+    border-color: #818181;
+}
+
+.voting-participant-icon {
+    font-size: 14pt;
+    color: #606060;
+    transition: color 0.5s;
+}
+
+.voting-participant-icon.voted {
+    color: limegreen;
+}
+
+.voting-participant-text-container {
+}
+
+.voting-participant-text {
+    /*max-width: 6rem;*/
+    color: #000000;
+    font-weight: 600;
+    font-size: 10pt;
+    text-overflow: ellipsis;
+    text-wrap: none;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.voting-participant-status {
+    /*max-width: 6rem;*/
+    color: #000000;
+    font-size: 9pt;
+    text-overflow: ellipsis;
+    text-wrap: none;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+#results-view > .row {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.tab-pane.active {
+    height: 100%;
+}
+
+.nav-link.active {
+    border-bottom: 3px solid #457B9D;
+    margin-bottom: 0px;
+}
+
+#participant-column {
+    min-width: 8rem;
+    max-width: 12rem;
+}
+
+@media (min-width: 400px) {
+    .voting-button-wrapper {
+        flex-basis: 50%;
+    }
+}
+
+@media (min-width: 600px) {
+    .voting-button-wrapper {
+        flex-basis: 33%;
+    }
+}
+
+@media (max-width: 800px) {
+    .main-row {
+        flex-direction: column;
+    }
+
+    .story-column {
+        width: 100%;
+        min-height: 0;
+        margin-bottom: 0.5rem;
+        flex-basis: 30%;
+    }
+
+    .voting-column {
+        width: 100%;
+        min-height: 0;
+        flex-basis: 70%;
+    }
+}
+
+@media (min-width: 800px) {
+    .main-row {
+        flex-direction: row;
+    }
+
+    .story-column {
+        height: 100%;
+        margin-right: 1rem;
+    }
+
+    .voting-column {
+        min-width: 0;
+        height: 100%;
+    }
+}
+
+@media (min-width: 1200px) {
+    .voting-button-wrapper {
+        flex-basis: 25%;
+    }
+}
