@@ -36,17 +36,17 @@ namespace PointingPoker.Data
             _options = new ConcurrentDictionary<string, CountingItem<PointingOption>>();
 
             // Pre-poplate topics
-            AddTopic(new Topic("Default Story 1", "This is some discussion about the topic"));
-            AddTopic(new Topic("Default Story 2", "This is some discussion about the topic"));
-            AddTopic(new Topic("Default Story 3", "This is some discussion about the topic"));
-            AddTopic(new Topic("Default Story 4", "This is some discussion about the topic"));
-            AddTopic(new Topic("Default Story 5", "This is some discussion about the topic"));
-            AddTopic(new Topic("Default Story 6", "This is some discussion about the topic"));
-            AddTopic(new Topic("Default Story 7", "This is some discussion about the topic"));
-            AddTopic(new Topic("Default Story 8", "This is some discussion about the topic"));
-            AddTopic(new Topic("Default Story 9", "This is some discussion about the topic"));
-            AddTopic(new Topic("Default Story 10", "This is some discussion about the topic"));
-            AddTopic(new Topic("Default Story 11", "This is some discussion about the topic"));
+            AddTopic(new Topic("Default Story 1", "This is some discussion about the topic 1"));
+            AddTopic(new Topic("Default Story 2", "This is some discussion about the topic 2"));
+            AddTopic(new Topic("Default Story 3", "This is some discussion about the topic 3"));
+            AddTopic(new Topic("Default Story 4", "This is some discussion about the topic 4"));
+            AddTopic(new Topic("Default Story 5", "This is some discussion about the topic 5"));
+            AddTopic(new Topic("Default Story 6", "This is some discussion about the topic 6"));
+            AddTopic(new Topic("Default Story 7", "This is some discussion about the topic 7"));
+            AddTopic(new Topic("Default Story 8", "This is some discussion about the topic 8"));
+            AddTopic(new Topic("Default Story 9", "This is some discussion about the topic 9"));
+            AddTopic(new Topic("Default Story 10", "This is some discussion about the topic 10"));
+            AddTopic(new Topic("Default Story 11", "This is some discussion about the topic 11"));
 
             // Pre-populate options
             AddOption(new PointingOption("0 points", "0"));
@@ -89,44 +89,26 @@ namespace PointingPoker.Data
             }
 
             var vote = new Vote(userId, topicId, optionId);
-            UpdateTopicVotes(topicId, existingVotes =>
-            {
-                var votes = existingVotes.ToList();
-                votes.RemoveAll(v => v.UserId == userId && v.TopicId == topicId);
-                votes.Add(vote);
-                return votes;
-            });
+            UpdateTopicVotes(topicId, votes => votes.RemoveAllFluent(v => v.UserId == userId && v.TopicId == topicId).AddFluent(vote));
 
             return false;
         }
 
-        public void ResetVotes(string topicId)
+        public void RestartVoting(string topicId)
         {
-            while (_topics.TryGetValue(topicId, out var item))
+            if (_topics.TryUpdate(topicId, v => new VotingTopic(v.Topic, VotingTopicState.Current, DateTime.Now, DateTime.MinValue, null)))
             {
-                var votingTopic = new VotingTopic(item.Item.Topic);
-                var newItem = new CountingItem<VotingTopic>(item.Count, votingTopic);
-                if (_topics.TryUpdate(topicId, newItem, item))
-                {
-                    SafeRunAction(OnTopicsChanged);
-                    SafeRunAction(OnVotesChanged);
-                    break;
-                }
+                OnTopicsChanged?.SafeInvoke();
+                OnVotesChanged?.SafeInvoke();
             }
         }
 
-        public void SetVotesShowing(string topicId, bool isShowing)
+        public void CompleteVoting(string topicId)
         {
-            while (_topics.TryGetValue(topicId, out var item))
+            if (_topics.TryUpdate(topicId, v => new VotingTopic(v.Topic, VotingTopicState.Voted, v.StartTime, DateTime.Now, v.Votes)))
             {
-                var votingTopic = new VotingTopic(item.Item.Topic, isShowing, VotingTopicState.Voted, item.Item.Votes);
-                var newItem = new CountingItem<VotingTopic>(item.Count, votingTopic);
-                if (_topics.TryUpdate(topicId, newItem, item))
-                {
-                    SafeRunAction(OnTopicsChanged);
-                    SafeRunAction(OnVotesChanged);
-                    break;
-                }
+                OnTopicsChanged?.SafeInvoke();
+                OnVotesChanged?.SafeInvoke();
             }
         }
 
@@ -148,43 +130,21 @@ namespace PointingPoker.Data
             }
 
             _participants.AddOrUpdate(participant.UserId, participant, (key, oldValue) => participant);
-            SafeRunAction(OnParticipantsChanged);
+            OnParticipantsChanged?.SafeInvoke();
         }
 
         public void RemoveParticipant(string userId)
         {
             if (_participants.TryRemove(userId, out var participant))
             {
-                var voteRemoved = false;
-                foreach (var topic in Topics)
+                if (Topics.Any(votingTopic => UpdateTopicVotes(votingTopic.Topic.Id, votes => votes.RemoveAllFluent(v => v.UserId == userId), false)))
                 {
-                    var result = UpdateTopicVotes(topic.Topic.Id, existingVotes =>
-                    {
-                        var votes = existingVotes.ToList();
-                        votes.RemoveAll(v => v.UserId == userId);
-                        return votes;
-                    }, false);
-
-                    if (result)
-                    {
-                        voteRemoved = true;
-                    }
+                    OnTopicsChanged?.SafeInvoke();
+                    OnVotesChanged?.SafeInvoke();
                 }
 
-                if (voteRemoved)
-                {
-                    SafeRunAction(OnTopicsChanged);
-                    SafeRunAction(OnVotesChanged);
-                }
-
-                SafeRunAction(OnParticipantsChanged);
+                OnParticipantsChanged?.SafeInvoke();
             }
-        }
-
-        public bool IsShowingTopic(string topicId)
-        {
-            var topic = FindTopic(topicId);
-            return topic != null && topic.IsShowing;
         }
 
         public VotingTopic FindTopic(string topicId)
@@ -209,7 +169,7 @@ namespace PointingPoker.Data
             var item = new CountingItem<VotingTopic>(votingTopic);
             if (_topics.TryAdd(topic.Id, item))
             {
-                SafeRunAction(OnTopicsChanged);
+                OnTopicsChanged?.SafeInvoke();
             }
         }
 
@@ -222,7 +182,7 @@ namespace PointingPoker.Data
                 var newItem = new CountingItem<VotingTopic>(item.Count, votingTopic);
                 if (_topics.TryUpdate(topic.Id, newItem, item))
                 {
-                    SafeRunAction(OnTopicsChanged);
+                    OnTopicsChanged?.SafeInvoke();
                     return;
                 }
             }
@@ -232,7 +192,7 @@ namespace PointingPoker.Data
         {
             if (_topics.TryRemove(id, out var topic))
             {
-                SafeRunAction(OnTopicsChanged);
+                OnTopicsChanged?.SafeInvoke();
             }
         }
 
@@ -246,7 +206,7 @@ namespace PointingPoker.Data
 
             if (_options.TryAdd(option.Id, new CountingItem<PointingOption>(option)))
             {
-                SafeRunAction(OnOptionsChanged);
+                OnOptionsChanged?.SafeInvoke();
             }
         }
 
@@ -257,7 +217,7 @@ namespace PointingPoker.Data
             {
                 if (_options.TryUpdate(option.Id, new CountingItem<PointingOption>(item.Count, option), item))
                 {
-                    SafeRunAction(OnOptionsChanged);
+                    OnOptionsChanged?.SafeInvoke();
                     return;
                 }
             }
@@ -268,67 +228,24 @@ namespace PointingPoker.Data
         {
             if (_options.TryRemove(optionId, out var option))
             {
-                var voteRemoved = false;
-                foreach (var topic in Topics)
+                if (Topics.Any(votingTopic => UpdateTopicVotes(votingTopic.Topic.Id, votes => votes.RemoveAllFluent(v => v.OptionId == optionId), false)))
                 {
-                    var result = UpdateTopicVotes(topic.Topic.Id, existingVotes =>
-                    {
-                        var votes = existingVotes.ToList();
-                        votes.RemoveAll(v => v.OptionId == optionId);
-                        return votes;
-                    }, false);
-
-                    if (result)
-                    {
-                        voteRemoved = true;
-                    }
+                    OnVotesChanged?.SafeInvoke();
+                    OnTopicsChanged?.SafeInvoke();
                 }
-
-                if (voteRemoved)
-                {
-                    SafeRunAction(OnVotesChanged);
-                    SafeRunAction(OnTopicsChanged);
-                }
-                SafeRunAction(OnOptionsChanged);
+                OnOptionsChanged?.SafeInvoke();
             }
         }
 
-        private bool UpdateTopicVotes(string topicId, Func<IEnumerable<Vote>, IEnumerable<Vote>> updateAction, bool fireUpdate = true)
+        private bool UpdateTopicVotes(string topicId, Func<List<Vote>, IEnumerable<Vote>> updateAction, bool fireUpdate = true)
         {
-            while (_topics.TryGetValue(topicId, out var item))
+            if (_topics.TryUpdate(topicId, v => new VotingTopic(v, updateAction(v.Votes.ToList()))) && fireUpdate)
             {
-                var currentVotingTopic = item.Item;
-                var updatedVotes = updateAction(item.Item.Votes);
-                if (_topics.TryUpdate(topicId, new CountingItem<VotingTopic>(item.Count, new VotingTopic(currentVotingTopic, updatedVotes)), item))
-                {
-                    if (fireUpdate)
-                    {
-                        SafeRunAction(OnVotesChanged);
-                    }
-
-                    return true;
-                }
+                OnVotesChanged?.SafeInvoke();
+                return true;
             }
 
             return false;
-        }
-
-        private void SafeRunAction(Action action)
-        {
-            if (action != null)
-            {
-                Task.Run(() =>
-                {
-                    try
-                    {
-                        action.Invoke();
-                    }
-                    catch
-                    {
-
-                    }
-                });
-            }
         }
     }
 }

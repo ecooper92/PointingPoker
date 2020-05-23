@@ -18,6 +18,8 @@ else if (_session == null)
 }
 else
 {
+    var selectedTopic = _session.FindTopic(SelectedTopicId);
+    var isShowingSelectedTopicResults = selectedTopic.State == VotingTopicState.Voted;
     <div class="w-100 h-100 p-3">
         <div class="main-row d-flex h-100">
             <div class="story-column flex-shrink-0">
@@ -34,16 +36,14 @@ else
                                 <tr>
                                     <th scope="col">Name</th>
                                     <th scope="col">Status</th>
-                                    <th scope="col">Result</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var topic in _session.Topics)
                                 {
-                                    <tr>
+                                    <tr @onclick="(e => ChangeSelectedTopic(topic.Topic.Id))">
                                         <td>@topic.Topic.Name</td>
-                                        <td>Upcoming</td>
-                                        <td>0.3</td>
+                                        <td>@topic.State</td>
                                     </tr>
                                 }
                             </tbody>
@@ -60,9 +60,15 @@ else
                         </ul>
 
                         <div class="pointing-session-control-container d-flex flex-wrap flex-row pl-2">
-                            <button @onclick="(e => _session.SetVotesShowing(SelectedTopicId, !_session.IsShowingTopic(SelectedTopicId)))" class="btn pointing-session-control oi oi-eye ml-2 mr-2 @(_session.IsShowingTopic(SelectedTopicId) ? "highlight" : "")" title="@(_session.IsShowingTopic(SelectedTopicId) ? "Hide Votes" : "Show Votes")" />
-                            <button @onclick="(e => _session.ResetVotes(SelectedTopicId))" class="btn pointing-session-control oi oi-reload ml-2 mr-2" title="Reset Votes" />
-                            <button class="btn pointing-session-control oi oi-cog ml-2 mr-2" @onclick=@(e => _configureSessionModal.Show()) title="Configure Session" />
+                            @if (selectedTopic != null && selectedTopic.State == VotingTopicState.Current)
+                            {
+                                <button class="btn pointing-session-control oi oi-check ml-1 mr-1" @onclick="(e => _session.CompleteVoting(SelectedTopicId))" title="Reset Votes" />
+                            }
+                            @if (selectedTopic != null)
+                            {
+                                <button class="btn pointing-session-control oi @(selectedTopic.State != VotingTopicState.Upcoming ?  "oi-reload" : "oi-media-play") ml-1 mr-1" @onclick="(e => _session.RestartVoting(SelectedTopicId))" title="Reset Votes" />
+                            }
+                            <button class="btn pointing-session-control oi oi-cog ml-1 mr-1" @onclick=@(e => _configureSessionModal.Show()) title="Configure Session" />
                         </div>
                     </div>
                     <div class="card-body p-0 border-top" style="min-height:0">
@@ -74,25 +80,29 @@ else
                                             <h6 class="m-2">Participants</h6>
                                             @foreach (var participant in _session.Participants)
                                             {
-                                                var isShowing = _session.IsShowingTopic(SelectedTopicId);
                                                 var vote = _session.GetVoteByUserAndTopic(participant.UserId, SelectedTopicId);
                                                 var voteOption = _session.Options.FirstOrDefault(o => o.Id == vote?.OptionId);
-                                                <VotingParticipant Participant=@participant Vote=@vote VoteOption=@voteOption IsShowingVote=@isShowing />
+                                                <VotingParticipant Participant=@participant Vote=@vote VoteOption=@voteOption IsShowingVote=@isShowingSelectedTopicResults />
                                             }
                                         </div>
-                                        <div class="d-flex flex-row mt-2 mb-2 justify-content-around flex-wrap w-100" style="overflow-y:auto; overflow-x:hidden">
-                                            @foreach (var option in _session.Options)
-                                            {
-                                                <div class="voting-button-wrapper p-2">
-                                                    <button class="voting-button w-100 h-100 btn @(SelectedVote != null && SelectedVote.OptionId == option.Id ? "btn-outline-success":"btn-outline-info") p-2 m-1" @onclick="(e => Vote(option.Id))">@option.Name</button>
-                                                </div>
-                                            }
+                                        <div class="d-flex flex-column w-100">
+                                            <div class="pt-3 pl-3 pr-3">
+                                                <textarea class="form-control">@selectedTopic?.Topic.Discussion</textarea>
+                                            </div>
+                                            <div class="d-flex flex-row mt-2 mb-2 justify-content-around flex-wrap flex-grow-1 w-100 p-1 pr-2" style="overflow-y:auto; overflow-x:hidden">
+                                                @foreach (var option in _session.Options)
+                                                {
+                                                    <div class="voting-button-wrapper p-2">
+                                                        <button class="voting-button w-100 h-100 btn @(SelectedVote != null && SelectedVote.OptionId == option.Id ? "btn-outline-success":"btn-outline-info") p-2 m-1" @onclick="(e => Vote(option.Id))">@option.Name</button>
+                                                    </div>
+                                                }
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div id="results-view" class="tab-pane">
-                                <VoteBarChart @ref="_voteBarChart" IsShowing="@(_session.FindTopic(SelectedTopicId)?.IsShowing ?? false)" Options="_session.Options" Votes="@(_session.FindTopic(SelectedTopicId)?.Votes ?? new Vote[0])" />
+                                <VoteBarChart @ref="_voteBarChart" IsShowing="@(selectedTopic != null && selectedTopic.State == VotingTopicState.Voted)" Options="_session.Options" Votes="@(selectedTopic?.Votes ?? new Vote[0])" />
                             </div>
                         </div>
                     </div>
