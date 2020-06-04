@@ -8,9 +8,25 @@ namespace PointingPoker.Data
 {
     public static class Utilities
     {
+        public static bool TryUpdate<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, TKey key, Func<TValue, TValue> updateFunction, out TValue updatedValue)
+        {
+            while (key != null && dictionary.TryGetValue(key, out var existingValue))
+            {
+                var newValue = updateFunction(existingValue);
+                if (dictionary.TryUpdate(key, newValue, existingValue))
+                {
+                    updatedValue = newValue;
+                    return true;
+                }
+            }
+
+            updatedValue = default(TValue);
+            return false;
+        }
+
         public static bool TryUpdate<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, TKey key, Func<TValue, TValue> updateFunction)
         {
-            while (dictionary.TryGetValue(key, out var existingValue))
+            while (key != null && dictionary.TryGetValue(key, out var existingValue))
             {
                 var newValue = updateFunction(existingValue);
                 if (dictionary.TryUpdate(key, newValue, existingValue))
@@ -24,7 +40,7 @@ namespace PointingPoker.Data
 
         public static bool TryUpdate<TKey, TValue>(this ConcurrentDictionary<TKey, CountingItem<TValue>> dictionary, TKey key, Func<TValue, TValue> updateFunction)
         {
-            while (dictionary.TryGetValue(key, out var existingValue))
+            while (key != null && dictionary.TryGetValue(key, out var existingValue))
             {
                 var newValue = updateFunction(existingValue.Item);
                 if (dictionary.TryUpdate(key, new CountingItem<TValue>(existingValue.Count, newValue), existingValue))
@@ -41,6 +57,18 @@ namespace PointingPoker.Data
             try
             {
                 action.Invoke();
+            }
+            catch
+            {
+
+            }
+        }
+
+        public static void SafeInvoke<T>(this Action<T> action, T arg)
+        {
+            try
+            {
+                action.Invoke(arg);
             }
             catch
             {

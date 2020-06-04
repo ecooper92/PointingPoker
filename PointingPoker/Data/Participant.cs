@@ -2,7 +2,7 @@
 
 namespace PointingPoker.Data
 {
-    public class Participant
+    public class Participant : IModel
     {
         public Participant(string userId, string name, ParticipantType type)
         {
@@ -16,5 +16,7 @@ namespace PointingPoker.Data
         public string Name { get; } = string.Empty;
 
         public ParticipantType Type { get; } = ParticipantType.Observer;
+
+        public string Id => UserId;
     }
 }

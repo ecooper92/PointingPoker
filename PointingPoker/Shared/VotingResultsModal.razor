@@ -1,0 +1,25 @@
+﻿@using PointingPoker.Data;
+
+<Modal @ref="_modal" OnClose="@Clear" HasSubmitButton="false" Title="Results" Classes="voting-results-modal">
+    <VoteBarChart IsShowing=@IsShowing Options="Options" Votes="Votes" />
+</Modal>
+
+@code {
+    private Modal _modal;
+
+    [Parameter]
+    public IEnumerable<Vote> Votes { get; set; }
+
+    [Parameter]
+    public IEnumerable<PointingOption> Options { get; set; }
+
+    public bool IsShowing { get; set; }
+
+    public async Task Show()
+    {
+        IsShowing = true;
+        await _modal.Show();
+    }
+
+    public void Clear() => IsShowing = false;
+}

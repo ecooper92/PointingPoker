@@ -2,7 +2,7 @@
 
 namespace PointingPoker.Data
 {
-    public class PointingOption
+    public class PointingOption : IModel
     {
         public PointingOption(string name, string value)
             : this(Guid.NewGuid().ToString(), name, value) { }

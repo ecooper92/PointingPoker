@@ -1,6 +1,6 @@
 ﻿@inject IJSRuntime JSRuntime;
 
-<div class="modal fade active show" id="@_windowId" tabindex="-1" role="dialog" aria-labelledby="@_windowId" aria-hidden="true">
+<div class="modal fade active show @Classes" id="@_windowId" tabindex="-1" role="dialog" aria-labelledby="@_windowId" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -38,6 +38,9 @@
 
     [Parameter]
     public RenderFragment ChildContent { get; set; }
+
+    [Parameter]
+    public string Classes { get; set; } = string.Empty;
 
     [Parameter]
     public string Title { get; set; } = string.Empty;
