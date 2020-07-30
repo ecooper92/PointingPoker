@@ -17,6 +17,7 @@ namespace PointingPoker.Data
         private ConcurrentDictionary<string, Participant> _participants;
         private ConcurrentDictionary<string, CountingItem<VotingTopic>> _topics;
         private ConcurrentDictionary<string, CountingItem<PointingOption>> _options;
+        private ConcurrentDictionary<string, ICollection<PointingOption>> _presetOptions;
 
         public event Action OnVotesChanged;
         public event Action OnTopicsChanged;
@@ -39,25 +40,53 @@ namespace PointingPoker.Data
             AddTopic(new Topic("Default Story 1", "some discussion"));
 
             // Pre-populate options
-            AddOption(new PointingOption("0 points", "0"));
-            AddOption(new PointingOption("1 point", "1"));
-            AddOption(new PointingOption("2 points", "2"));
-            AddOption(new PointingOption("3 points", "3"));
-            AddOption(new PointingOption("5 points", "5"));
-            AddOption(new PointingOption("8 points", "8"));
-            AddOption(new PointingOption("13 points", "13"));
-            AddOption(new PointingOption("20 points", "20"));
-            AddOption(new PointingOption("40 points", "40"));
-            AddOption(new PointingOption("100 points", "100"));
+            var storyOptions = new List<PointingOption>()
+            {
+                new PointingOption("0 points", "0"),
+                new PointingOption("1 point", "1"),
+                new PointingOption("2 points", "2"),
+                new PointingOption("3 points", "3"),
+                new PointingOption("5 points", "5"),
+                new PointingOption("8 points", "8"),
+                new PointingOption("13 points", "13"),
+                new PointingOption("20 points", "20"),
+                new PointingOption("40 points", "40"),
+                new PointingOption("100 points", "100"),
+                new PointingOption("?", "?")
+            };
+
+            var taskOptions = new List<PointingOption>()
+            {
+                new PointingOption("0.5 days", "0.5"),
+                new PointingOption("1 day", "1"),
+                new PointingOption("1.5 days", "1.5"),
+                new PointingOption("2 days", "2"),
+                new PointingOption("2.5 days", "2.5"),
+                new PointingOption("3 days", "3"),
+                new PointingOption("3.5 days", "3.5"),
+                new PointingOption("4 days", "4"),
+                new PointingOption("4.5 days", "4.5"),
+                new PointingOption("5 days", "5"),
+                new PointingOption("?", "?")
+            };
+
+            _presetOptions = new ConcurrentDictionary<string, ICollection<PointingOption>>();
+            _presetOptions.TryAdd("Story", storyOptions);
+            _presetOptions.TryAdd("Task", taskOptions);
+            SetOptionPreset("Story");
         }
 
         public string Id { get; } = string.Empty;
+
+        public IEnumerable<string> OptionPresets => _presetOptions.Select(p => p.Key).OrderBy(p => p).ToArray();
 
         public IEnumerable<VotingTopic> Topics => _topics.OrderBy(o => o.Value.Count).Select(o => o.Value.Item).ToArray();
 
         public IEnumerable<PointingOption> Options => _options.OrderBy(o => o.Value.Count).Select(o => o.Value.Item).ToArray();
 
         public IEnumerable<Participant> Participants => _participants.Select(o => o.Value).ToArray();
+
+        public string SelectedOptionsPreset { get; private set; }
 
         public Vote GetVoteByUserAndTopic(string userId, string topicId)
         {
@@ -226,7 +255,54 @@ namespace PointingPoker.Data
             }
         }
 
-        public void AddOption(PointingOption option)
+        public void SetOptionPreset(string preset)
+        {
+            // Return if this already is the preset.
+            if (SelectedOptionsPreset == preset)
+            {
+                return;
+            }
+
+            if (_presetOptions.TryGetValue(preset, out var options))
+            {
+                var voteRemoved = false;
+                foreach (var optionToRemove in _options)
+                {
+                    if (_options.TryRemove(optionToRemove.Key, out var option))
+                    {
+                        foreach (var topic in Topics)
+                        {
+                            while (_topics.TryGetValue(topic.Topic.Id, out var item))
+                            {
+                                var votes = item.Item.Votes.ToList();
+                                votes.RemoveAll(v => v.OptionId == option.Item.Id);
+
+                                if (_topics.TryUpdate(topic.Topic.Id, new CountingItem<VotingTopic>(item.Count, new VotingTopic(item.Item.Topic, item.Item.IsShowing, votes)), item))
+                                {
+                                    voteRemoved = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                foreach (var option in options)
+                {
+                    _options.TryAdd(option.Id, new CountingItem<PointingOption>(option));
+                }
+
+                SelectedOptionsPreset = preset;
+                if (voteRemoved)
+                {
+                    SafeRunAction(OnTopicsChanged);
+                    SafeRunAction(OnVotesChanged);
+                }
+                SafeRunAction(OnOptionsChanged);
+            }
+        }
+
+        public void AddOption(string name, string value)
         {
             // Sanity check
             if (_options.Count > MAX_OPTIONS)
@@ -234,21 +310,25 @@ namespace PointingPoker.Data
                 throw new InvalidOperationException($"Only up to {MAX_OPTIONS} options are supported per session.");
             }
 
+            var option = new PointingOption(name, value);
             while (!_options.TryAdd(option.Id, new CountingItem<PointingOption>(option)))
             {
                 option = new PointingOption(option.Name, option.Value);
             }
 
+            SelectedOptionsPreset = null;
             SafeRunAction(OnOptionsChanged);
         }
 
-        public void UpdateOption(PointingOption option)
+        public void UpdateOption(string id, string name, string value)
         {
             // Attempt to update until successful or if the option is removed/doesn't exist.
+            var option = new PointingOption(id, name, value);
             while (_options.TryGetValue(option.Id, out var item) && item.Item.IsModified(option))
             {
                 if (_options.TryUpdate(option.Id, new CountingItem<PointingOption>(item.Count, option), item))
                 {
+                    SelectedOptionsPreset = null;
                     SafeRunAction(OnOptionsChanged);
                     return;
                 }
@@ -276,6 +356,7 @@ namespace PointingPoker.Data
                     }
                 }
 
+                SelectedOptionsPreset = null;
                 if (voteRemoved)
                 {
                     SafeRunAction(OnTopicsChanged);

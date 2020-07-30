@@ -1,7 +1,7 @@
 @import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
 
 html, body {
-    font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+    /*font-family: 'Segoe UI', Helvetica, Arial, sans-serif;*/
     height: 100%;
     background-color: #F9F9F9;
 }
@@ -50,8 +50,8 @@ a, .btn-link {
 
 .btn-primary {
     color: #fff;
-    background-color: #457B9D;
-    border-color: #1861ac;
+    /*background-color: #457B9D;*/
+    /*border-color: #1861ac;*/
 }
 
 .valid.modified:not([type=checkbox]) {
@@ -132,7 +132,7 @@ a, .btn-link {
     border-radius: 1rem;
     font-size: 10pt;
     cursor: pointer;
-    max-width: 8rem;
+    max-width: 14rem;
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow-x: hidden;
