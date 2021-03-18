@@ -28,8 +28,8 @@ else if (_session == null)
 else
 {
     <div class="pointing-session w-100 h-100 d-flex flex-column">
-        <div class="pointing-session-top d-flex flex-row flex-grow-1">
-            <div class="pointing-session-left d-flex flex-column flex-shrink-0">
+        <div style="overflow-x: hidden; overflow-y: hidden" class="d-flex flex-row flex-grow-1">
+            <div style="background-color: white; overflow-y: auto; overflow-x: hidden" class="d-flex flex-column flex-shrink-0">
                 @foreach (var participant in _session.Participants)
                 {
                     var userVote = _session.GetVoteByUserAndTopic(participant.UserId, SelectedTopicId);
@@ -43,7 +43,7 @@ else
                     </div>
                 }
             </div>
-            <div class="pointing-session-right d-flex flex-column flex-grow-1">
+            <div style="overflow-y: auto; overflow-x: hidden" class="pointing-session-right d-flex flex-column flex-grow-1">
                 <div class="pointing-session-control-container d-flex flex-wrap flex-row pl-2">
                     <button @onclick="(e => _session.SetVotesShowing(SelectedTopicId, !_session.IsShowingTopic(SelectedTopicId)))" class="btn pointing-session-control oi oi-eye m-2 @(_session.IsShowingTopic(SelectedTopicId) ? "highlight" : "")" title="@(_session.IsShowingTopic(SelectedTopicId) ? "Hide Votes" : "Show Votes")" />
                     <button @onclick="(e => _session.ResetVotes(SelectedTopicId))" class="btn pointing-session-control oi oi-reload m-2" title="Reset Votes" />
@@ -61,33 +61,23 @@ else
                     }
                 </div>
 
-                <div class="d-flex flex-row flex-wrap">
-                    <div class="col-sm-8 p-2">
-                        <div class="d-flex flex-column">
-                            <div class="d-flex flex-row mt-2 mb-2">
-                                <input class="form-control" type="text" placeholder="Name" value="@_session.FindTopic(SelectedTopicId)?.Topic.Name" @onchange="(e => UpdatePointingTopic(SelectedTopicId, e.Value.ToString(), _session.FindTopic(SelectedTopicId)?.Topic.Discussion))" />
-                            </div>
-
-                            <div class="d-flex flex-row mt-2 mb-2">
-                                <textarea class="form-control" placeholder="Discussion..." value="@_session.FindTopic(SelectedTopicId)?.Topic.Discussion" @onchange="(e => UpdatePointingTopic(SelectedTopicId, _session.FindTopic(SelectedTopicId)?.Topic.Name, e.Value.ToString()))"></textarea>
-                            </div>
+                <div class="d-flex flex-column p-2">
+                    <div class="d-flex flex-row mt-2 mb-2">
+                        <input class="form-control" type="text" placeholder="Name" value="@_session.FindTopic(SelectedTopicId)?.Topic.Name" @onchange="(e => UpdatePointingTopic(SelectedTopicId, e.Value.ToString(), _session.FindTopic(SelectedTopicId)?.Topic.Discussion))" />
+                    </div>
+                    @if (Participant != null)
+                    {
+                        <div class="d-flex flex-row mt-2 mb-2 justify-content-around flex-wrap">
+                            @foreach (var option in _session.Options)
+                            {
+                                <button class="btn @(SelectedVote != null && SelectedVote.OptionId == option.Id ? "btn-success":"btn-info") p-2 m-1" @onclick="(e => Vote(option.Id))">@option.Name</button>
+                            }
                         </div>
-                    </div>
-                    <div class="col-sm-4 p-2">
-                        @if (Participant != null)
-                        {
-                            <div class="d-flex flex-row mt-2 mb-2 justify-content-around flex-wrap">
-                                @foreach (var option in _session.Options)
-                                {
-                                    <button class="btn @(SelectedVote != null && SelectedVote.OptionId == option.Id ? "btn-success":"btn-info") p-2 m-1" @onclick="(e => Vote(option.Id))">@option.Name</button>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <span class="text-center">You are currently spectating, <span class="btn-link" data-toggle="modal" data-target="#JoinSessionWindow">Join</span> the session to participate in voting!</span>
-                        }
-                    </div>
+                    }
+                    else
+                    {
+                        <span class="text-center">You are currently spectating, <span class="btn-link" data-toggle="modal" data-target="#JoinSessionWindow">Join</span> the session to participate in voting!</span>
+                    }
                 </div>
                 
 
@@ -95,8 +85,6 @@ else
                     <ChartJsBarChart @ref="_barChart" Config="@_barChartConfig"></ChartJsBarChart>
                 </div>
             </div>
-        </div>
-        <div class="pointing-session-bottom">
         </div>
         <div class="modal fade" id="JoinSessionWindow" tabindex="-1" role="dialog" aria-labelledby="JoinSessionWindow" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">

@@ -47,5 +47,12 @@ namespace PointingPoker.Data
 
             return result;
         }
+
+        public IEnumerable<PointingSession> Get()
+        {
+            return _sessions
+                .Select(s => s.Value)
+                .ToArray();
+        }
     }
 }

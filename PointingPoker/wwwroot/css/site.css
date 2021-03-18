@@ -85,25 +85,8 @@ a, .btn-link {
     top: 0.5rem;
 }
 
-.pointing-session-top {
-    overflow-y: hidden;
-    overflow-x: hidden;
-}
-
-.pointing-session-bottom {
-}
-
-.pointing-session-left {
-    background-color: white;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
 .pointing-session-right {
-    border-top: 1px solid #ECECEC;
     border-left: 1px solid #ECECEC;
-    overflow-y: auto;
-    overflow-x: hidden;
 }
 
 .pointing-session-control-container {
